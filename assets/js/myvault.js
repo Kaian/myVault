@@ -133,38 +133,33 @@ function is_logged(){
             browse_secrets(DEFAULT_SECRET_PATH);
         }
 
-        var data = get_tree(DEFAULT_SECRET_PATH);
+        get_tree(DEFAULT_SECRET_PATH).then(function (data) {
+            var keys_tree = $("#tree").treeview({
+                data:data,
+                levels:1,
+                color: "#2e2d30",
+                selectedBackColor: "#b0232a",
+                enableLinks:true,
+                expandIcon: "fa fa-plus",
+                collapseIcon: "fa fa-minus",
+                onNodeSelected: function(event, node) {
+                    var node = $('#tree').treeview("getSelected")[0];
+                   window.location.href = node.href;
+                    $('#tree').treeview('expandNode', node.nodeId);
+                }
+            });
 
-        $(document).ready(function($) {
-            setTimeout(function() {
-                var keys_tree = $("#tree").delay(1000).treeview({
-                   data:data,
-                   levels:1,
-                   color: "#2e2d30",
-                   selectedBackColor: "#b0232a",
-                   enableLinks:true,
-                   expandIcon: "fa fa-plus",
-                   collapseIcon: "fa fa-minus",
-                   onNodeSelected: function(event, node) {
-                       var node = $('#tree').treeview("getSelected")[0];
-                       window.location.href = node.href;
-                       $('#tree').treeview('expandNode', node.nodeId);
-                      }
-                });
-
-                // search tree
-                var findExpandibleNodess = function() {
-                    return keys_tree.treeview('search', [ $('#input_search_tree').val(), { ignoreCase: true, exactMatch: false } ]);
-                };
-                var expandibleNodes = findExpandibleNodess();
-                // Expand/collapse/toggle nodes
-                $('#input_search_tree').on('keyup', function (e) {
-                    expandibleNodes = findExpandibleNodess();
-                    $('.expand-node').prop('disabled', !(expandibleNodes.length >= 1));
-                });
-            }, 1000);
+            // search tree
+            var findExpandibleNodess = function() {
+                return keys_tree.treeview('search', [ $('#input_search_tree').val(), { ignoreCase: true, exactMatch: false } ]);
+            };
+            var expandibleNodes = findExpandibleNodess();
+            // Expand/collapse/toggle nodes
+            $('#input_search_tree').on('keyup', function (e) {
+                expandibleNodes = findExpandibleNodess();
+                $('.expand-node').prop('disabled', !(expandibleNodes.length >= 1));
+            });
         });
-
     }
 }
 
@@ -176,36 +171,45 @@ function print_errors(){
     $('#log_error').html(errors);
 }
 
-function get_tree(path){
+function get_tree(path) {
     var token = get_token();
-    var items = []
-    $.ajax({
-        type: "LIST",
-        async: true,
-        crossDomain: true,
-        headers: {"X-Vault-Token": token},
-        url: VAULT_URL+path.substring(1),
-        contentType: "application/json",
-        dataType: "json",
-        statusCode: {
-            200: function (response, textStatus, errorThrown) {
-            },
-         },
-    }).always(function(response){
-        $.each(response.data.keys.sort(),function(index,value){
-            item = {};
-            item["text"] = value;
-            item["href"] = "#!"+path+value;
 
-            if (value.substring(value.length-1) == "/"){
-                item["nodes"] = [];
-                var sub_items = get_tree(path+value);
-                item["nodes"] = sub_items;
-            }
-            items.push(item);
-        })
+    var promise = new Promise((resolve, reject) => {
+        $.ajax({
+            type: "LIST",
+            async: true,
+            crossDomain: true,
+            headers: { "X-Vault-Token": token },
+            url: VAULT_URL + path.substring(1),
+            contentType: "application/json",
+            dataType: "json"
+        }).always(function (response) {
+            var promises = []
+            var items = []
+
+            $.each(response.data.keys.sort(), (index, value) => {
+                var item = {
+                  text: value,
+                  href: "#!" + path + value
+                };
+
+                if (value.substring(value.length - 1) == "/") {
+                   promises.push(get_tree(path + value));
+                }
+
+                items.push(item);
+            });
+
+            Promise.all(promises).then(data => {
+                $.each(data, (index, value) => {
+                   items[index]['nodes'] = value;
+                });
+                resolve(items);
+            });
+        });
     });
-    return items
+
+    return promise;
 }
 
 function update_breadcrumb() {
