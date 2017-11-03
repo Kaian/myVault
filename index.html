@@ -140,6 +140,11 @@
                   <li class="nav-item">
                     <a class="nav-link" id="token-tab" data-toggle="tab" href="#token-tab-content" role="tab" aria-controls="token">Token</a>
                   </li>
+                  <li class="nav-item">
+                    <a class="nav-link" id="preferences-tab" data-toggle="tab" href="#preferences-tab-content" role="tab" aria-controls="preferences">
+                        <i id="lock-icon" class="fa fa-cog" aria-hidden="true" data-toggle="modal" data-target="#preferences-modal"></i>
+                    </a>
+                  </li>
                 </ul>
                 <div class="tab-content" id="login-tab-content">
 
@@ -168,6 +173,16 @@
                           </form>
                       </div>
 
+                      <div class="tab-pane fade" id="preferences-tab-content" role="tabpanel" aria-labelledby="preferences-tab">
+                          <div class="form-group">
+                            <label for="input_vault_url_preferences">Vault server URL</label>
+                            <input type="input" id="input_vault_url_preferences" class="form-control" placeholder="https://myvault.com:8200/v1/">
+                          </div>
+                          <div class="modal-footer">
+                            <button id="save_preferences" type="button" class="btn btn-primary">Save changes</button>
+                          </div>
+                      </div>
+
                 </div>
 
           </div>
@@ -178,10 +193,14 @@
 
 
     <script type="text/javascript">
+        $("#input_vault_url_preferences").val(localStorage.getItem("ironvault_url") || VAULT_URL);
         $("#modal").load("modal.html");
         $("#modal_move").load("move_modal.html");
         $("#modal_delete").load("delete_modal.html");
         $('[data-toggle="tooltip"]').tooltip()
+        $("#save_preferences").click(function(){
+            save_options();
+        });
     </script>
   </body>
 </html>

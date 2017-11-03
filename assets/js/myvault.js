@@ -11,6 +11,12 @@ var TIMER = setInterval(automatic_logout, DEFAULT_TIMER);
 // end global variables
 
 function save_options(){
+    if ($("#input_vault_url_preferences").val() != ""){
+        // for preferences tab
+        VAULT_URL = $("#input_vault_url_preferences").val();
+        localStorage.setItem("ironvault_url", VAULT_URL);
+    }
+
     if ($("#input_vault_url").val() != ""){
         VAULT_URL = $("#input_vault_url").val();
         localStorage.setItem("ironvault_url", VAULT_URL);
