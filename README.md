@@ -1,3 +1,4 @@
+
 # MyVault
 
 MyVault is a very basic web interface to browse secrets from a remote [HashiCorp's Vault](https://www.vaultproject.io/)
@@ -7,9 +8,9 @@ It's written in static HTML and Javascript using [Jquery](https://jquery.com/)
 There's no intention to add features to configure Vault backend. But will see...
 
 ## Demo
-You can see a demo in the static web pages of Github in this link [https://yuki.github.io/myVault/login.html](https://yuki.github.io/myVault/login.html)
+You can see a demo in the static web pages of Github in this link [https://yuki.github.io/myVault/](https://yuki.github.io/myVault/)
 
-You must click on the **gear icon** to introduce your Vault server and the default secret path. 
+You must click on the **gear icon** to introduce your Vault server and the default secret path.
 
 ## Features
 * Browse all the secrets
@@ -25,7 +26,7 @@ There will be more features in future.
 To use MyVault you will need a fully functional [Vault](https://www.vaultproject.io/) backup with LDAP authentication (other authentications will be added in the future). You could login with Token too.
 
 ## How to use it
-You can see in [demo](https://yuki.github.io/myVault/login.html) link. If you want to checkout in your local machine, clone the project and get the submodule for the editor:
+You can see in [demo](https://yuki.github.io/myVault/) link. If you want to checkout in your local machine, clone the project and get the submodule for the editor:
 
 ```
 git clone https://github.com/yuki/myVault.git

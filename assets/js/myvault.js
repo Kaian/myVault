@@ -70,6 +70,8 @@ function login(method){
         } else if (method == "token"){
             localStorage.setItem("ironvault_token", res.data.id);
         }
+        localStorage.setItem("ironvault_accessor", res.auth.accessor);
+        localStorage.setItem("ironvault_username", res.auth.metadata.username);
         $("#login_modal").modal("hide");
         is_logged();
     }).fail(function(res, textStatus, errorThrown){
@@ -95,12 +97,21 @@ function get_path(){
 
 function logout(error){
     if (localStorage.getItem("ironvault_token")){
+        var token = get_token();
         localStorage.removeItem('ironvault_token');
         $("#login_modal").modal("show");
         $("#username").val("");
         $("#password").val("");
         $("#token").val("");
         $("#login_error").html(error).slideDown().delay(1500).slideUp();
+        //revoke token
+        $.ajax({
+            type: "POST",
+            headers: { "X-Vault-Token": token },
+            url: VAULT_URL + "auth/token/revoke-self",
+            contentType: "application/json",
+            dataType: "json"
+        });
     }
 }
 
