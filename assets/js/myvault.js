@@ -292,11 +292,14 @@ function get_vault_secret(path){
     });
 }
 
-function set_vault_secret(path,data,backup=true){
+function set_vault_secret(path,data,backup=true,username=""){
     var token = get_token();
     var json_item = {};
     json_item["ironvault"] = "markdown";
     json_item["data"] = data;
+    if (username != ""){
+        json_item["username"] = username;
+    }
 
     if (backup){
         backup_secret(path);
@@ -338,9 +341,10 @@ function delete_secret(path){
     });
 }
 
-function set_secret(action,data,create){
+function set_secret(action,data,create,backup,username){
     var token = get_token();
     var path = "";
+
     if (action == "created"){
         path = $("#create_secret_path").html()+$("#new_secret_name").val();
     } else {
@@ -351,7 +355,7 @@ function set_secret(action,data,create){
         }
     }
 
-    set_vault_secret(path,data).done(function(response, textStatus, jqXHR){
+    set_vault_secret(path,data,backup,username).done(function(response, textStatus, jqXHR){
         switch(jqXHR.status) {
             case 204:
                     $("#log_success").html("Secret has been "+action).slideDown().delay(1500).slideUp();
@@ -375,6 +379,7 @@ function get_secret(){
     var path = get_path();
     var edit = false;
     $("#create_secret").hide();
+    $("#log_info").hide();
     if (path.indexOf("&")>0){
         var params= path.split("&")
         path = params[0];
@@ -393,6 +398,19 @@ function get_secret(){
             update_breadcrumb();
 
             $("#editormd textarea").text(response.data["data"]);
+
+            if (response.data["username"]){
+                edit = false;
+                $("#log_info").html("Secret is locked by " + response.data["username"]).slideDown();
+                $("#edit_secret_btn").hide();
+                $("#move_secret_btn").hide();
+                $("#delete_secret_btn").hide();
+            } else {
+                // make sure that the buttons aren't hidden
+                $("#edit_secret_btn").show();
+                $("#move_secret_btn").show();
+                $("#delete_secret_btn").show();
+            }
 
             var editormarkdown = "";
             if (edit) {
@@ -423,19 +441,29 @@ function get_secret(){
                             "h1", "h2", "h3", "h4", "h5", "h6", "|",
                             "list-ul", "list-ol", "hr", "|",
                             "link", "reference-link", "image", "code",
-                            "preformatted-text", "code-block",
+                            "code-block",
                             "table", "emoji", "pagebreak", "|",
                             "watch", "preview", "search", "fullscreen"
                         ]
                     },
                     onload : function() {
-                        // Awesome hack to add "save" option :D
+                        set_secret("locked",editormarkdown.getMarkdown(),false,false,localStorage.getItem("ironvault_username"));
+
+                        // Awesome hack to add "save" and close buttons :D
                         $("ul.editormd-menu")
                             .prepend(
-                                '<li><a href="javascript:;" id="editor_update_secret_btn" title="Save" unselectable="on">\
+                                '<li><a href="javascript:;" id="close_secret_btn" title="Close/Unlock" unselectable="on">\
+                                <i class="fa fa-close" unselectable="on"></i></a></li>\
+                                <li><a href="javascript:;" id="editor_update_secret_btn" title="Save" unselectable="on">\
                                 <i class="fa fa-floppy-o" unselectable="on"></i></a></li>');
+                        $("#close_secret_btn").click(function(){
+                            var path = get_path();
+                            path = path.replace('&edit=1', '');
+                            set_secret("unlocked",editormarkdown.getMarkdown(),false,false,"");
+                            window.location.href = "#!"+path;
+                        });
                         $("#editor_update_secret_btn").click(function(){
-                            set_secret("updated",editormarkdown.getMarkdown(),false);
+                            set_secret("updated",editormarkdown.getMarkdown(),false,true,localStorage.getItem("ironvault_username"));
                         });
 
                         $('.markdown-toc a').click(function(e) {
@@ -520,8 +548,7 @@ function browse_secrets(path){
 }
 
 function hash_changed(){
-    var hash = location.hash.replace( /^#/, '' );
-    get_secret(hash);
+    get_secret();
     reset_timer();
 }
 
@@ -537,7 +564,7 @@ $(document).ready(function(){
 
     // index.html
     $("#create_secret_btn").click(function(){
-        set_secret("created","",true);
+        set_secret("created","",true,false,"");
     });
 
     $("#edit_secret_btn").click(function(){
