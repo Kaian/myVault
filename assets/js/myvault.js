@@ -3,7 +3,8 @@
 var VAULT_URL = "http://127.0.0.1:8200/v1/";
 var DEFAULT_SECRET_PATH = "/secret/";
 var BACKUP_SECRET_PATH  = "/backup/";
-var EFFECT_TIME= 200;
+var EFFECT_TIME = 1750;
+var EFFECT_TIME_EDITORS = 200;
 var DEFAULT_TIMER = 15*60*1000; //minutes*secs*milliseconds
 var path_array = [];
 
@@ -60,7 +61,7 @@ function login(method){
         dataType: "json",
         statusCode: {
             400: function (response, textStatus, errorThrown) {
-                $("#login_error").html(response.responseJSON.errors).slideDown().delay(3500).slideUp();
+                $("#login_error").html(response.responseJSON.errors).slideDown().delay(EFFECT_TIME).slideUp();
                 // $("#login_error")
             }
         },
@@ -77,7 +78,7 @@ function login(method){
     }).fail(function(res, textStatus, errorThrown){
         if (res.readyState == 0){
             logout("There's a network error");
-            $('#log_error').slideDown().delay(1500).slideUp();
+            $('#log_error').slideDown().delay(EFFECT_TIME).slideUp();
         }
     });
 
@@ -103,7 +104,7 @@ function logout(error){
         $("#username").val("");
         $("#password").val("");
         $("#token").val("");
-        $("#login_error").html(error).slideDown().delay(1500).slideUp();
+        $("#login_error").html(error).slideDown().delay(EFFECT_TIME).slideUp();
         //revoke token
         $.ajax({
             type: "POST",
@@ -150,33 +151,7 @@ function is_logged(){
             browse_secrets(DEFAULT_SECRET_PATH);
         }
 
-        get_tree(DEFAULT_SECRET_PATH).then(function (data) {
-            var keys_tree = $("#tree").treeview({
-                data:data,
-                levels:1,
-                color: "#2e2d30",
-                selectedBackColor: "#b0232a",
-                enableLinks:true,
-                expandIcon: "fa fa-plus",
-                collapseIcon: "fa fa-minus",
-                onNodeSelected: function(event, node) {
-                    var node = $('#tree').treeview("getSelected")[0];
-                   window.location.href = node.href;
-                    $('#tree').treeview('expandNode', node.nodeId);
-                }
-            });
-
-            // search tree
-            var findExpandibleNodess = function() {
-                return keys_tree.treeview('search', [ $('#input_search_tree').val(), { ignoreCase: true, exactMatch: false } ]);
-            };
-            var expandibleNodes = findExpandibleNodess();
-            // Expand/collapse/toggle nodes
-            $('#input_search_tree').on('keyup', function (e) {
-                expandibleNodes = findExpandibleNodess();
-                $('.expand-node').prop('disabled', !(expandibleNodes.length >= 1));
-            });
-        });
+        update_secret_tree()
     }
 }
 
@@ -190,6 +165,7 @@ function print_errors(){
 
 function get_tree(path) {
     var token = get_token();
+    var current_path = get_path();
 
     var promise = new Promise((resolve, reject) => {
         $.ajax({
@@ -205,10 +181,24 @@ function get_tree(path) {
             var items = []
 
             $.each(response.data.keys.sort(), (index, value) => {
+                var link_path = path + value;
+
                 var item = {
                   text: value,
-                  href: "#!" + path + value
+                  href: "#!" + link_path
                 };
+
+                if (current_path.substring(0,link_path.length) == link_path){
+                    item["state"] = {
+                        expanded: true
+                    }
+                    if (current_path == link_path){
+                        item["state"] = {
+                            expanded: true,
+                            selected: true
+                        }
+                    }
+                }
 
                 if (value.substring(value.length - 1) == "/") {
                    promises.push(get_tree(path + value));
@@ -227,6 +217,36 @@ function get_tree(path) {
     });
 
     return promise;
+}
+
+function update_secret_tree(){
+    get_tree(DEFAULT_SECRET_PATH).then(function (data) {
+        var keys_tree = $("#tree").treeview({
+            data:data,
+            levels:1,
+            color: "#2e2d30",
+            selectedBackColor: "#b0232a",
+            enableLinks:true,
+            expandIcon: "fa fa-plus",
+            collapseIcon: "fa fa-minus",
+            onNodeSelected: function(event, node) {
+                var node = $('#tree').treeview("getSelected")[0];
+               window.location.href = node.href;
+                $('#tree').treeview('expandNode', node.nodeId);
+            }
+        });
+
+        // search tree
+        var findExpandibleNodess = function() {
+            return keys_tree.treeview('search', [ $('#input_search_tree').val(), { ignoreCase: true, exactMatch: false } ]);
+        };
+        var expandibleNodes = findExpandibleNodess();
+        // Expand/collapse/toggle nodes
+        $('#input_search_tree').on('keyup', function (e) {
+            expandibleNodes = findExpandibleNodess();
+            $('.expand-node').prop('disabled', !(expandibleNodes.length >= 1));
+        });
+    });
 }
 
 function update_breadcrumb() {
@@ -318,9 +338,10 @@ function move_secret(path,new_path){
     get_vault_secret(path).done(function(response, textStatus, jqXHR){
         set_vault_secret(new_path,response.data["data"]).done(function(response, textStatus, jqXHR){
             $("#move_modal").modal("hide");
-            $("#log_success").html("Secret has been moved to "+new_path).slideDown().delay(1500).slideUp();
+            $("#log_success").html("Secret has been moved to "+new_path).slideDown().delay(EFFECT_TIME).slideUp();
             delete_vault_secret(path);
             window.location.href = "#!"+new_path;
+            update_secret_tree();
         });
     });
 }
@@ -335,10 +356,11 @@ function backup_secret(path){
 function delete_secret(path){
     delete_vault_secret(path).done(function(response, textStatus, jqXHR){
         window.location.href = "#!"+DEFAULT_SECRET_PATH;
-        $("#log_error").html("Secret has been deleted").slideDown().delay(1500).slideUp();
+        $("#log_error").html("Secret has been deleted").slideDown().delay(EFFECT_TIME).slideUp();
         $("#editors").hide();
         $("#create_secret").show();
     });
+    update_secret_tree();
 }
 
 function set_secret(action,data,create,backup,username){
@@ -358,14 +380,15 @@ function set_secret(action,data,create,backup,username){
     set_vault_secret(path,data,backup,username).done(function(response, textStatus, jqXHR){
         switch(jqXHR.status) {
             case 204:
-                    $("#log_success").html("Secret has been "+action).slideDown().delay(1500).slideUp();
+                    $("#log_success").html("Secret has been "+action).slideDown().delay(EFFECT_TIME).slideUp();
                     if (create){
                         window.location.href = "#!"+path+"&edit=1";
+                        update_secret_tree();
                     }
                 break;
             case 400:
                     $("#log_error").html("Secret has NOT been "+action+"<br/><br/>ERROR: "+errorThrown);
-                    $("#log_error").slideDown().delay(2500).slideUp();
+                    $("#log_error").slideDown().delay(EFFECT_TIME).slideUp();
                 break;
             case 403:
                     logout(textStatus+" "+errorThrown);
@@ -394,7 +417,7 @@ function get_secret(){
         $("#editormd").empty().removeAttr('class').css('height', 'auto');
         $("#editormd").append('<textarea style="display:none">');
         get_vault_secret(path).done(function(response, textStatus, jqXHR){
-            $("#editors").slideDown(EFFECT_TIME);
+            $("#editors").slideDown(EFFECT_TIME_EDITORS);
             update_breadcrumb();
 
             $("#editormd textarea").text(response.data["data"]);
@@ -461,6 +484,7 @@ function get_secret(){
                             path = path.replace('&edit=1', '');
                             set_secret("unlocked",editormarkdown.getMarkdown(),false,false,"");
                             window.location.href = "#!"+path;
+                            update_secret_tree();
                         });
                         $("#editor_update_secret_btn").click(function(){
                             set_secret("updated",editormarkdown.getMarkdown(),false,true,localStorage.getItem("ironvault_username"));
@@ -507,8 +531,8 @@ function get_secret(){
                         logout(textStatus+" "+errorThrown);
                     break;
                 case 404:
-                        $('#log_error').html("Secret not found").slideDown().delay(2500).slideUp();
-                        $("#editors").slideUp(EFFECT_TIME);
+                        $('#log_error').html("Secret not found").slideDown().delay(EFFECT_TIME).slideUp();
+                        $("#editors").slideUp(EFFECT_TIME_EDITORS);
                     break;
             }
         });
@@ -518,7 +542,7 @@ function get_secret(){
 function browse_secrets(path){
     var token = get_token();
     var path_array = [];
-    $("#editors").slideUp(EFFECT_TIME);
+    $("#editors").slideUp(EFFECT_TIME_EDITORS);
     $("#create_secret").show();
     $("#editormd").empty();
     $.ajax({
@@ -537,7 +561,7 @@ function browse_secrets(path){
                 logout(textStatus+" "+errorThrown);
             },
             404: function (response, textStatus, errorThrown) {
-                $('#log_error').html("Path not found").slideDown().delay(2500).slideUp();
+                $('#log_error').html("Path not found").slideDown().delay(EFFECT_TIME).slideUp();
             }
          },
     }).fail(function(res, textStatus, errorThrown){
@@ -570,6 +594,7 @@ $(document).ready(function(){
     $("#edit_secret_btn").click(function(){
         var path = get_path();
         window.location.href = "#!"+path+"&edit=1";
+        update_secret_tree();
     });
 
     $("#print_secret_btn").click(function(){
