@@ -551,6 +551,49 @@ function get_secret(){
     }
 }
 
+function browse_vault_secrets(path){
+    var token = get_token();
+    return $.ajax({
+        type: "LIST",
+        headers: {"X-Vault-Token": token},
+        url: VAULT_URL+path.substring(1),
+        contentType: "application/json",
+        dataType: "json",
+        timeout: 5000
+    });
+}
+
+function browse_secret_backups(){
+    var path = get_path();
+    var token = get_token();
+    var regexp = /(\w*)$/;
+    var orig_path = path.replace(regexp,"");
+    var secret = path.replace(orig_path,"");
+    var backups = [];
+
+    browse_vault_secrets(BACKUP_SECRET_PATH+orig_path.substring(1)).done(function(response, textStatus, jqXHR){
+        // empty the backups table
+        $("#backups_table_body").empty();
+
+        $.each(response.data.keys.sort(), (index, value) => {
+            if (value.startsWith(secret+"__")){
+                var item = {};
+                item["href"] = "#!"+BACKUP_SECRET_PATH+orig_path.substring(1)+value;
+                var re = new RegExp(secret+"\_\_\(\\d+\)")
+                var date = re.exec(value);
+                var d = new Date(parseInt(date[1]));
+                item["date"] = d.toISOString();
+                backups.push(item);
+            }
+        });
+        $.each(backups.reverse(), (index, value) => {
+            var tr = "<tr><td>"+value["date"]+'</td><td><a href="'+value["href"]+'" target="_blank">Show</a>'+"</td></tr>"
+            $("#backups_table_body").append(tr);
+        });
+        $("#backups_modal").modal("show");
+    });
+}
+
 function browse_secrets(path){
     var token = get_token();
     var path_array = [];
@@ -607,6 +650,10 @@ $(document).ready(function(){
         var path = get_path();
         window.location.href = "#!"+path+"&edit=1";
         update_secret_tree();
+    });
+
+    $("#backups_secret_btn").click(function(){
+        browse_secret_backups();
     });
 
     $("#unlock_secret_btn").click(function(){

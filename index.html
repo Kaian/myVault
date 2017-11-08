@@ -97,6 +97,7 @@
                   <button id="edit_secret_btn"  type="button" class="btn btn-success fa fa-edit" data-toggle="tooltip" title="edit"></button>
                   <button id="move_secret_btn" type="button" class="btn btn-info fa fa-reply" aria-hidden="true" data-toggle="modal" title="move" data-target="#move_modal"></button>
                   <button id="print_secret_btn" type="button" class="btn btn-primary fa fa-print" data-toggle="tooltip" title="print"></button>
+                  <button id="backups_secret_btn"  type="button" class="btn btn-light fa fa-calendar" data-toggle="tooltip" title="backups"></button>
                   <button id="unlock_secret_btn"  type="button" class="btn btn-light fa fa-unlock-alt" data-toggle="tooltip" title="unlock" style="display:none;"></button>
                   <button id="delete_secret_btn"  type="button" class="btn btn-danger fa fa-remove" data-toggle="modal" title="delete" data-target="#delete_modal"></button>
               </div>
@@ -121,6 +122,7 @@
   <div id="modal"></div>
   <div id="modal_move"></div>
   <div id="modal_delete"></div>
+  <div id="modal_backups"></div>
 
   <!-- login Modal -->
     <div class="modal fade" id="login_modal" tabindex="-1" role="dialog" aria-labelledby="login_modal_label" aria-hidden="" data-keyboard="false" data-backdrop="static">
@@ -199,6 +201,7 @@
         $("#modal").load("modal.html");
         $("#modal_move").load("move_modal.html");
         $("#modal_delete").load("delete_modal.html");
+        $("#modal_backups").load("backups_modal.html");
         $('[data-toggle="tooltip"]').tooltip()
         $("#save_preferences").click(function(){
             save_options();
