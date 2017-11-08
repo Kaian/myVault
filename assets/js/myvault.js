@@ -346,6 +346,13 @@ function move_secret(path,new_path){
     });
 }
 
+function unlock_secret(){
+    path = get_path();
+    get_vault_secret(path).done(function(response, textStatus, jqXHR){
+        set_secret("unlocked",response.data["data"],false,false,"");
+    });
+}
+
 function backup_secret(path){
     var date = (new Date).getTime();
     get_vault_secret(path).done(function(response, textStatus, jqXHR){
@@ -384,6 +391,9 @@ function set_secret(action,data,create,backup,username){
                     if (create){
                         window.location.href = "#!"+path+"&edit=1";
                         update_secret_tree();
+                    }
+                    if (action == "unlocked"){
+                        get_secret();
                     }
                 break;
             case 400:
@@ -428,10 +438,12 @@ function get_secret(){
                 $("#edit_secret_btn").hide();
                 $("#move_secret_btn").hide();
                 $("#delete_secret_btn").hide();
+                $("#unlock_secret_btn").show();
             } else {
                 // make sure that the buttons aren't hidden
                 $("#edit_secret_btn").show();
                 $("#move_secret_btn").show();
+                $("#unlock_secret_btn").hide();
                 $("#delete_secret_btn").show();
             }
 
@@ -595,6 +607,10 @@ $(document).ready(function(){
         var path = get_path();
         window.location.href = "#!"+path+"&edit=1";
         update_secret_tree();
+    });
+
+    $("#unlock_secret_btn").click(function(){
+        unlock_secret();
     });
 
     $("#print_secret_btn").click(function(){
