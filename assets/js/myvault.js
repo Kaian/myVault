@@ -1,5 +1,5 @@
 // global variables
-// TOOD: this should be made in better way :-)
+// TODO: this should be made in better way :-)
 var VAULT_URL = "http://127.0.0.1:8200/v1/";
 var DEFAULT_SECRET_PATH = "/secret/";
 var BACKUP_SECRET_PATH  = "/backup/";
@@ -35,50 +35,39 @@ function save_options(){
 }
 
 function login(method){
-    var url = localStorage.getItem("ironvault_url") || VAULT_URL;
     var data = "";
-    var header = "";
-    var type = "POST";
+    var headers = "";
+    var action = "POST";
+    var path = "";
     if (method == "ldap"){
-        var username = document.getElementById("username").value;
-        url = url+"auth/ldap/login/"+username
-        var pass = document.getElementById("password").value;
-        data = {password:pass};
+        path = "/auth/ldap/login/"+document.getElementById("username").value;
+        data = {password:document.getElementById("password").value};
     } else if (method == "token") {
-        type = "GET";
+        action = "GET";
         var token = document.getElementById("token").value;
-        url = url+"auth/token/lookup-self";
-        header = {"X-Vault-Token": token};
+        path = "/auth/token/lookup-self";
+        headers = {"X-Vault-Token": token};
         data = {"token": "ClientToken"};
     }
 
-    $.ajax({
-        type: type,
-        data :JSON.stringify(data),
-        url: url,
-        headers: header,
-        contentType: "application/json",
-        dataType: "json",
-        statusCode: {
-            400: function (response, textStatus, errorThrown) {
-                $("#login_error").html(response.responseJSON.errors).slideDown().delay(EFFECT_TIME).slideUp();
-                // $("#login_error")
-            }
-        },
-    }).done(function(res) {
+    make_action(action,path,data,headers).done(function(res) {
         if (method == "ldap"){
             localStorage.setItem("ironvault_token", res.auth.client_token);
+            localStorage.setItem("ironvault_accessor", res.auth.accessor);
+            localStorage.setItem("ironvault_username", res.auth.metadata.username);
         } else if (method == "token"){
             localStorage.setItem("ironvault_token", res.data.id);
+            localStorage.setItem("ironvault_username", res.data.meta.username);
         }
-        localStorage.setItem("ironvault_accessor", res.auth.accessor);
-        localStorage.setItem("ironvault_username", res.auth.metadata.username);
         $("#login_modal").modal("hide");
         is_logged();
-    }).fail(function(res, textStatus, errorThrown){
-        if (res.readyState == 0){
+    }).fail(function(jqXHR, textStatus, errorThrown){
+        if (jqXHR.readyState == 0){
             logout("There's a network error");
             $('#log_error').slideDown().delay(EFFECT_TIME).slideUp();
+        } 
+        if (jqXHR.status >= 400) {
+            $("#login_error").html(jqXHR.responseJSON.errors[0]).slideDown().delay(EFFECT_TIME).slideUp();
         }
     });
 
@@ -98,21 +87,13 @@ function get_path(){
 
 function logout(error){
     if (localStorage.getItem("ironvault_token")){
-        var token = get_token();
         localStorage.removeItem('ironvault_token');
         $("#login_modal").modal("show");
-        $("#username").val("");
-        $("#password").val("");
-        $("#token").val("");
+        //clean inputs
+        $("#username, #password, #token").val("");
         $("#login_error").html(error).slideDown().delay(EFFECT_TIME).slideUp();
         //revoke token
-        $.ajax({
-            type: "POST",
-            headers: { "X-Vault-Token": token },
-            url: VAULT_URL + "auth/token/revoke-self",
-            contentType: "application/json",
-            dataType: "json"
-        });
+        make_action("PUT","/auth/token/revoke-self");
     }
 }
 
@@ -134,7 +115,6 @@ function is_logged(){
     if (!token){
         $("#login_modal").modal("show");
     } else {
-
         VAULT_URL = localStorage.getItem("ironvault_url") || VAULT_URL;
         DEFAULT_SECRET_PATH = localStorage.getItem("ironvault_path") || DEFAULT_SECRET_PATH;
         BACKUP_SECRET_PATH  = localStorage.getItem("ironvault_backup_path") || BACKUP_SECRET_PATH;
@@ -155,28 +135,11 @@ function is_logged(){
     }
 }
 
-function print_errors(){
-    var errors = window.location.hash.substring(1);
-    if (errors){
-        $("#log_error").slideDown();
-    }
-    $('#log_error').html(errors);
-}
-
 function get_tree(path) {
-    var token = get_token();
     var current_path = get_path();
 
     var promise = new Promise((resolve, reject) => {
-        $.ajax({
-            type: "LIST",
-            async: true,
-            crossDomain: true,
-            headers: { "X-Vault-Token": token },
-            url: VAULT_URL + path.substring(1),
-            contentType: "application/json",
-            dataType: "json"
-        }).always(function (response) {
+        make_action("LIST",path).always(function (response) {
             var promises = []
             var items = []
 
@@ -292,28 +255,24 @@ function print_secret(data){
 
 }
 
-function delete_vault_secret(path){
+function make_action(action,path,data="",headers=""){
+    VAULT_URL = localStorage.getItem("ironvault_url") || VAULT_URL;
     var token = get_token();
+    if (headers == ""){
+        headers = {"X-Vault-Token": token};
+    }
     return $.ajax({
-        type: "DELETE",
-        headers: {"X-Vault-Token": token},
-        url: VAULT_URL+path.substring(1)
-    });
-}
-
-function get_vault_secret(path){
-    var token = get_token();
-    return $.ajax({
-        type: "GET",
-        headers: {"X-Vault-Token": token},
+        type: action,
+        headers: headers,
         url: VAULT_URL+path.substring(1),
-        contentType: "application/json",
+        timeout: 5000,
         dataType: "json",
+        data: JSON.stringify(data),
+        contentType: "application/json"
     });
 }
 
 function set_vault_secret(path,data,backup=true,username=""){
-    var token = get_token();
     var json_item = {};
     json_item["ironvault"] = "markdown";
     json_item["data"] = data;
@@ -324,44 +283,38 @@ function set_vault_secret(path,data,backup=true,username=""){
     if (backup){
         backup_secret(path);
     }
-    return $.ajax({
-        type: "PUT",
-        headers: {"X-Vault-Token": token},
-        url: VAULT_URL+path.substring(1),
-        contentType: "application/json",
-        dataType: "json",
-        data: JSON.stringify(json_item)
-    });
+    return make_action("PUT",path,json_item);
 }
 
 function move_secret(path,new_path){
-    get_vault_secret(path).done(function(response, textStatus, jqXHR){
+    make_action("GET",path).done(function(response, textStatus, jqXHR){
         set_vault_secret(new_path,response.data["data"]).done(function(response, textStatus, jqXHR){
             $("#move_modal").modal("hide");
             $("#log_success").html("Secret has been moved to "+new_path).slideDown().delay(EFFECT_TIME).slideUp();
-            delete_vault_secret(path);
-            window.location.href = "#!"+new_path;
-            update_secret_tree();
+            make_action("DELETE",path).done(function(){
+                window.location.href = "#!"+new_path;
+                update_secret_tree();
+            });
         });
     });
 }
 
 function unlock_secret(){
     path = get_path();
-    get_vault_secret(path).done(function(response, textStatus, jqXHR){
+    make_action("GET",path).done(function(response, textStatus, jqXHR){
         set_secret("unlocked",response.data["data"],false,false,"");
     });
 }
 
 function backup_secret(path){
     var date = (new Date).getTime();
-    get_vault_secret(path).done(function(response, textStatus, jqXHR){
+    make_action("GET",path).done(function(response, textStatus, jqXHR){
         set_vault_secret(BACKUP_SECRET_PATH+path.substring(1)+"__"+date,response.data["data"],false);
     });
 }
 
 function delete_secret(path){
-    delete_vault_secret(path).done(function(response, textStatus, jqXHR){
+    make_action("DELETE",path).done(function(response, textStatus, jqXHR){
         window.location.href = "#!"+DEFAULT_SECRET_PATH;
         $("#log_error").html("Secret has been deleted").slideDown().delay(EFFECT_TIME).slideUp();
         $("#editors").hide();
@@ -385,25 +338,17 @@ function set_secret(action,data,create,backup,username){
     }
 
     set_vault_secret(path,data,backup,username).done(function(response, textStatus, jqXHR){
-        switch(jqXHR.status) {
-            case 204:
-                    $("#log_success").html("Secret has been "+action).slideDown().delay(EFFECT_TIME).slideUp();
-                    if (create){
-                        window.location.href = "#!"+path+"&edit=1";
-                        update_secret_tree();
-                    }
-                    if (action == "unlocked"){
-                        get_secret();
-                    }
-                break;
-            case 400:
-                    $("#log_error").html("Secret has NOT been "+action+"<br/><br/>ERROR: "+errorThrown);
-                    $("#log_error").slideDown().delay(EFFECT_TIME).slideUp();
-                break;
-            case 403:
-                    logout(textStatus+" "+errorThrown);
-                break;
-        }; //switch
+        $("#log_success").html("Secret has been "+action).slideDown().delay(EFFECT_TIME).slideUp();
+        if (create){
+            window.location.href = "#!"+path+"&edit=1";
+            update_secret_tree();
+        }
+        if (action == "unlocked"){
+            get_secret();
+        }
+    }).fail(function(jqXHR, textStatus, errorThrown){
+        $("#log_error").html("Secret has NOT been "+action+"<br/><br/>ERROR: "+errorThrown);
+        $("#log_error").slideDown().delay(EFFECT_TIME).slideUp();
     });
 }
 
@@ -420,55 +365,53 @@ function get_secret(){
             edit = true
         }
     }
+    update_breadcrumb();
+
     if (path.substring(path.length-1) == "/"){
-        // we're in a directory
         browse_secrets(path);
     } else if (path.length > 0) {
         $("#editormd").empty().removeAttr('class').css('height', 'auto');
         $("#editormd").append('<textarea style="display:none">');
-        get_vault_secret(path).done(function(response, textStatus, jqXHR){
+        make_action("GET",path).done(function(response, textStatus, jqXHR){
             $("#editors").slideDown(EFFECT_TIME_EDITORS);
-            update_breadcrumb();
-
             $("#editormd textarea").text(response.data["data"]);
 
             if (response.data["username"]){
                 edit = false;
                 $("#log_info").html("Secret is locked by " + response.data["username"]).slideDown();
-                $("#edit_secret_btn").hide();
-                $("#move_secret_btn").hide();
-                $("#delete_secret_btn").hide();
+                $("#edit_secret_btn, #move_secret_btn, #delete_secret_btn").hide();
                 $("#unlock_secret_btn").show();
             } else {
                 // make sure that the buttons aren't hidden
-                $("#edit_secret_btn").show();
-                $("#move_secret_btn").show();
+                $("#edit_secret_btn, #move_secret_btn, #delete_secret_btn").show();
                 $("#unlock_secret_btn").hide();
-                $("#delete_secret_btn").show();
             }
 
             var editormarkdown = "";
+            var editor_options = {
+                // height             : 800,
+                mode               : "gfm", // https://codemirror.net/mode/gfm/
+                tocm               : true,
+                tocTitle           : "TOCM",
+                htmlDecode         : "style,script,iframe",
+                emoji              : true,
+                taskList           : true,
+                tex                : true,
+                flowChart          : true,
+                sequenceDiagram    : true,
+            };
             if (edit) {
                 var editormarkdown = "";
                 $("#functions_buttons").hide();
-
-                editormarkdown = editormd({
-                    id                 : "editormd",
+                
+                // extending editor.md 
+                $.extend(editor_options,{
                     width              : "100%",
                     path               : "deps/editor.md/lib/",
-                    // height             : 800,
-                    mode               : "gfm", // https://codemirror.net/mode/gfm/
-                    tocm               :true,
                     codeFold           : true,
                     // saveHTMLToTextarea : true,
                     searchReplace      : true,
                     autoCloseTags      : true,
-                    htmlDecode         : "style,script,iframe",
-                    emoji              : true,
-                    taskList           : true,
-                    tex                : true,
-                    flowChart          : true,
-                    sequenceDiagram    : true,
                     toolbarAutoFixed   : false,
                     toolbarIcons : function(){
                         return ["undo", "redo", "|",
@@ -483,7 +426,6 @@ function get_secret(){
                     },
                     onload : function() {
                         set_secret("locked",editormarkdown.getMarkdown(),false,false,localStorage.getItem("ironvault_username"));
-
                         // Awesome hack to add "save" and close buttons :D
                         $("ul.editormd-menu")
                             .prepend(
@@ -513,21 +455,12 @@ function get_secret(){
                     },
 
                 });
+
+                editormarkdown = editormd("editormd", editor_options);
             } else {
                 $("#functions_buttons").show();
                 // just show the secret
-                editormarkdown = editormd.markdownToHTML("editormd", {
-                    // height             : 800,
-                    mode               : "gfm", // https://codemirror.net/mode/gfm/
-                    tocm               : true,
-                    tocTitle           : "TOCM",
-                    htmlDecode         : "style,script,iframe",
-                    emoji              : true,
-                    taskList           : true,
-                    tex                : true,
-                    flowChart          : true,
-                    sequenceDiagram    : true,
-                });
+                editormarkdown = editormd.markdownToHTML("editormd", editor_options );
                 $('div.markdown-toc a').click(function(e) {
                     e.preventDefault();
                     var hash = this.hash;
@@ -538,29 +471,10 @@ function get_secret(){
                 });
             }
         }).fail(function(jqXHR, textStatus, errorThrown){
-            switch (jqXHR.status){
-                case 403:
-                        logout(textStatus+" "+errorThrown);
-                    break;
-                case 404:
-                        $('#log_error').html("Secret not found").slideDown().delay(EFFECT_TIME).slideUp();
-                        $("#editors").slideUp(EFFECT_TIME_EDITORS);
-                    break;
-            }
+            $('#log_error').html("Secret not found").slideDown().delay(EFFECT_TIME).slideUp();
+            $("#editors").slideUp(EFFECT_TIME_EDITORS);
         });
     }
-}
-
-function browse_vault_secrets(path){
-    var token = get_token();
-    return $.ajax({
-        type: "LIST",
-        headers: {"X-Vault-Token": token},
-        url: VAULT_URL+path.substring(1),
-        contentType: "application/json",
-        dataType: "json",
-        timeout: 5000
-    });
 }
 
 function browse_secret_backups(){
@@ -571,7 +485,7 @@ function browse_secret_backups(){
     var secret = path.replace(orig_path,"");
     var backups = [];
 
-    browse_vault_secrets(BACKUP_SECRET_PATH+orig_path.substring(1)).done(function(response, textStatus, jqXHR){
+    make_action("LIST",BACKUP_SECRET_PATH+orig_path.substring(1)).done(function(response, textStatus, jqXHR){
         // empty the backups table
         $("#backups_table_body").empty();
 
@@ -595,33 +509,16 @@ function browse_secret_backups(){
 }
 
 function browse_secrets(path){
-    var token = get_token();
-    var path_array = [];
     $("#editors").slideUp(EFFECT_TIME_EDITORS);
     $("#create_secret").show();
     $("#editormd").empty();
-    $.ajax({
-        type: "LIST",
-        headers: {"X-Vault-Token": token},
-        timeout: 1000,
-        url: VAULT_URL+path.substring(1),
-        contentType: "application/json",
-        dataType: "json",
-        timeout: 5000,
-        statusCode: {
-            200: function (response, textStatus, errorThrown) {
-                update_breadcrumb();
-            },
-            403: function (response, textStatus, errorThrown){
-                logout(textStatus+" "+errorThrown);
-            },
-            404: function (response, textStatus, errorThrown) {
-                $('#log_error').html("Path not found").slideDown().delay(EFFECT_TIME).slideUp();
+    make_action("LIST",path).fail(function(jqXHR, textStatus, errorThrown){
+        if (jqXHR.status != 200){
+            if (jqXHR.readyState == 0){
+                $('#log_error').html("Network Error").slideDown().delay(EFFECT_TIME).slideUp();
+            } else {
+                $('#log_error').html(jqXHR.statusText).slideDown().delay(EFFECT_TIME).slideUp();
             }
-         },
-    }).fail(function(res, textStatus, errorThrown){
-        if (res.readyState == 0){
-            logout("There's a network error");
         }
     });
 }
@@ -632,16 +529,10 @@ function hash_changed(){
 }
 
 $(document).ready(function(){
-    // login.html
-    $("#login").click(function(){
-        login();
-    });
-
     $("#logout").click(function(){
         logout("You have been logout");
     });
 
-    // index.html
     $("#create_secret_btn").click(function(){
         set_secret("created","",true,false,"");
     });
