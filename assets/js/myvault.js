@@ -148,7 +148,8 @@ function get_tree(path) {
 
                 var item = {
                   text: value,
-                  href: "#!" + link_path
+                  href: "#!" + link_path,
+                  path: "#!" + path
                 };
 
                 if (current_path.substring(0,link_path.length) == link_path){
@@ -172,7 +173,10 @@ function get_tree(path) {
 
             Promise.all(promises).then(data => {
                 $.each(data, (index, value) => {
-                   items[index]['nodes'] = value;
+                   var x = items.map(function(e){
+                       return e['href'];
+                   }).indexOf(value[0]['path'])
+                   items[x]['nodes'] = value;
                 });
                 resolve(items);
             });
