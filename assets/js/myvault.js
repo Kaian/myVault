@@ -57,7 +57,7 @@ function login(method){
             localStorage.setItem("ironvault_username", res.auth.metadata.username);
         } else if (method == "token"){
             localStorage.setItem("ironvault_token", res.data.id);
-            localStorage.setItem("ironvault_username", res.data.meta.username);
+            localStorage.setItem("ironvault_username", res.data.display_name);
         }
         $("#login_modal").modal("hide");
         is_logged();
@@ -120,26 +120,37 @@ function is_logged(){
         BACKUP_SECRET_PATH  = localStorage.getItem("ironvault_backup_path") || BACKUP_SECRET_PATH;
         var path = get_path();
         reset_timer();
-        if (path.length > 0) {
-            if (path.substring(path.length-1) == "/"){
-                // we're in a directory
-                browse_secrets(path);
-            } else {
-                get_secret();
-            }
-        } else {
-            browse_secrets(DEFAULT_SECRET_PATH);
-        }
-
+        get_secret();
         update_secret_tree()
     }
+}
+
+function capabilities_allow(capabilities,policy){
+    if (capabilities.indexOf("root") > -1){
+        return true;
+    } else if (capabilities.indexOf(policy) > -1){
+        return true;
+    } else {
+        return false;
+    }
+}
+
+function get_capabilities(path){
+    var token = get_token();
+    data = {path: path.substring(1),token: token}
+    var promise = new Promise((resolve, reject) => {
+        make_action("POST","/sys/capabilities",data).done(function(response, textStatus, jqXHR){
+            resolve(jqXHR.responseJSON.capabilities);
+        });
+    });
+    return promise;
 }
 
 function get_tree(path) {
     var current_path = get_path();
 
     var promise = new Promise((resolve, reject) => {
-        make_action("LIST",path).always(function (response) {
+        make_action("LIST",path).done(function (response) {
             var promises = []
             var items = []
 
@@ -291,15 +302,29 @@ function set_vault_secret(path,data,backup=true,username=""){
 }
 
 function move_secret(path,new_path){
-    make_action("GET",path).done(function(response, textStatus, jqXHR){
-        set_vault_secret(new_path,response.data["data"]).done(function(response, textStatus, jqXHR){
-            $("#move_modal").modal("hide");
-            $("#log_success").html("Secret has been moved to "+new_path).slideDown().delay(EFFECT_TIME).slideUp();
-            make_action("DELETE",path).done(function(){
-                window.location.href = "#!"+new_path;
-                update_secret_tree();
+    //we must make sure that the user has capabilities to move the secret
+    get_capabilities(path).then(function(capabilities_path){
+        if (capabilities_allow(capabilities_path,"delete")) {
+            get_capabilities(new_path).then(function(capabilities_new_path){
+                if (capabilities_allow(capabilities_new_path,"create") || capabilities_allow(capabilities_new_path,"update")) {
+                    //now we can move the secret
+                    make_action("GET",path).done(function(response, textStatus, jqXHR){
+                        set_vault_secret(new_path,response.data["data"]).done(function(response, textStatus, jqXHR){
+                            $("#move_modal").modal("hide");
+                            $("#log_success").html("Secret has been moved to "+new_path).slideDown().delay(EFFECT_TIME).slideUp();
+                            make_action("DELETE",path).done(function(){
+                                window.location.href = "#!"+new_path;
+                                update_secret_tree();
+                            });
+                        });
+                    });
+                } else {
+                    $("#log_error").html("You cannot move the secret into the new path").slideDown().delay(EFFECT_TIME).slideUp();
+                }
             });
-        });
+        } else {
+            $("#log_error").html("You cannot move/delete the secret").slideDown().delay(EFFECT_TIME).slideUp();
+        }
     });
 }
 
@@ -371,114 +396,151 @@ function get_secret(){
     }
     update_breadcrumb();
 
-    if (path.substring(path.length-1) == "/"){
-        browse_secrets(path);
-    } else if (path.length > 0) {
-        $("#editormd").empty().removeAttr('class').css('height', 'auto');
-        $("#editormd").append('<textarea style="display:none">');
-        make_action("GET",path).done(function(response, textStatus, jqXHR){
-            $("#editors").slideDown(EFFECT_TIME_EDITORS);
-            $("#editormd textarea").text(response.data["data"]);
+    get_capabilities(path).then(function(capabilities){
 
-            if (response.data["username"]){
-                edit = false;
-                $("#log_info").html("Secret is locked by " + response.data["username"]).slideDown();
-                $("#edit_secret_btn, #move_secret_btn, #delete_secret_btn").hide();
-                $("#unlock_secret_btn").show();
+        if (path.substring(path.length-1) == "/"){
+            $("#editormd").empty();
+            //directory
+            $("#editors").slideUp(EFFECT_TIME_EDITORS);
+            if (capabilities_allow(capabilities,"create") || capabilities_allow(capabilities,"update")) {
+                $("#create_secret").show();
             } else {
-                // make sure that the buttons aren't hidden
-                $("#edit_secret_btn, #move_secret_btn, #delete_secret_btn").show();
-                $("#unlock_secret_btn").hide();
+                $("#log_info").html("You have no permissions to create a secret here").slideDown().delay(EFFECT_TIME).slideUp();
             }
 
-            var editormarkdown = "";
-            var editor_options = {
-                // height             : 800,
-                mode               : "gfm", // https://codemirror.net/mode/gfm/
-                tocm               : true,
-                tocTitle           : "TOCM",
-                htmlDecode         : "style,script,iframe",
-                emoji              : true,
-                taskList           : true,
-                tex                : true,
-                flowChart          : true,
-                sequenceDiagram    : true,
-            };
-            if (edit) {
-                var editormarkdown = "";
-                $("#functions_buttons").hide();
-                
-                // extending editor.md 
-                $.extend(editor_options,{
-                    width              : "100%",
-                    path               : "deps/editor.md/lib/",
-                    codeFold           : true,
-                    // saveHTMLToTextarea : true,
-                    searchReplace      : true,
-                    autoCloseTags      : true,
-                    toolbarAutoFixed   : false,
-                    toolbarIcons : function(){
-                        return ["undo", "redo", "|",
-                            "bold", "del", "italic", "quote", "|",
-                            "h1", "h2", "h3", "h4", "h5", "h6", "|",
-                            "list-ul", "list-ol", "hr", "|",
-                            "link", "reference-link", "image", "code",
-                            "code-block",
-                            "table", "emoji", "pagebreak", "|",
-                            "watch", "preview", "search", "fullscreen"
-                        ]
-                    },
-                    onload : function() {
-                        set_secret("locked",editormarkdown.getMarkdown(),false,false,localStorage.getItem("ironvault_username"));
-                        // Awesome hack to add "save" and close buttons :D
-                        $("ul.editormd-menu")
-                            .prepend(
-                                '<li><a href="javascript:;" id="close_secret_btn" title="Close/Unlock" unselectable="on">\
-                                <i class="fa fa-close" unselectable="on"></i></a></li>\
-                                <li><a href="javascript:;" id="editor_update_secret_btn" title="Save" unselectable="on">\
-                                <i class="fa fa-floppy-o" unselectable="on"></i></a></li>');
-                        $("#close_secret_btn").click(function(){
-                            var path = get_path();
-                            path = path.replace('&edit=1', '');
-                            set_secret("unlocked",editormarkdown.getMarkdown(),false,false,"");
-                            window.location.href = "#!"+path;
-                            update_secret_tree();
-                        });
-                        $("#editor_update_secret_btn").click(function(){
-                            set_secret("updated",editormarkdown.getMarkdown(),false,true,localStorage.getItem("ironvault_username"));
-                        });
+            if (capabilities_allow(capabilities,"list")){
+                make_action("LIST",path).fail(function(jqXHR, textStatus, errorThrown){
+                    if (jqXHR.status != 200){
+                        if (jqXHR.readyState == 0){
+                            $('#log_error').html("Network Error").slideDown().delay(EFFECT_TIME).slideUp();
+                        } else {
+                            $('#log_error').html(jqXHR.statusText).slideDown().delay(EFFECT_TIME).slideUp();
+                        }
+                    }
+                });
+            }
+        } else if (path.length > 0) {
+            $("#editormd").empty().removeAttr('class').css('height', 'auto');
+            $("#editormd").append('<textarea style="display:none">');
+            $(".button").hide();
 
-                        $('.markdown-toc a').click(function(e) {
+            if (capabilities_allow(capabilities,"read")) {
+
+                make_action("GET",path).done(function(response, textStatus, jqXHR){
+                    $("#editors").slideDown(EFFECT_TIME_EDITORS);
+                    $("#editormd textarea").text(response.data["data"]);
+
+                    if (response.data["username"]){
+                        edit = false;
+                        $("#log_info").html("Secret is locked by <b>'" + response.data["username"] + "'</b>").slideDown();
+                        if (capabilities_allow(capabilities,"create") || capabilities_allow(capabilities,"update")) {
+                            $("#unlock_secret_btn").show();
+                        }
+                        $("#edit_secret_btn, #move_secret_btn, #delete_secret_btn").hide();
+                    } else {
+                        // make sure that the buttons aren't hidden, depends of permissions
+                        if (capabilities_allow(capabilities,"create") || capabilities_allow(capabilities,"update") ) {
+                            $("#edit_secret_btn").show();
+                            $("#unlock_secret_btn").hide();
+                        }
+                        if (capabilities_allow(capabilities,"delete")) {
+                            $("#move_secret_btn, #delete_secret_btn").show();
+                        }
+                    }
+                    $("#print_secret_btn").show();
+
+                    $("#backups_secret_btn").show();
+
+                    var editormarkdown = "";
+                    var editor_options = {
+                        // height             : 800,
+                        mode               : "gfm", // https://codemirror.net/mode/gfm/
+                        tocm               : true,
+                        tocTitle           : "TOCM",
+                        htmlDecode         : "style,script,iframe",
+                        emoji              : true,
+                        taskList           : true,
+                        tex                : true,
+                        flowChart          : true,
+                        sequenceDiagram    : true,
+                    };
+                    if (edit) {
+                        var editormarkdown = "";
+                        $("#functions_buttons").hide();
+
+                        // extending editor.md 
+                        $.extend(editor_options,{
+                            width              : "100%",
+                            path               : "deps/editor.md/lib/",
+                            codeFold           : true,
+                            // saveHTMLToTextarea : true,
+                            searchReplace      : true,
+                            autoCloseTags      : true,
+                            toolbarAutoFixed   : false,
+                            toolbarIcons : function(){
+                                return ["undo", "redo", "|",
+                                    "bold", "del", "italic", "quote", "|",
+                                    "h1", "h2", "h3", "h4", "h5", "h6", "|",
+                                    "list-ul", "list-ol", "hr", "|",
+                                    "link", "reference-link", "image", "code",
+                                    "code-block",
+                                    "table", "emoji", "pagebreak", "|",
+                                    "watch", "preview", "search", "fullscreen"
+                                ]
+                            },
+                            onload : function() {
+                                set_secret("locked",editormarkdown.getMarkdown(),false,false,localStorage.getItem("ironvault_username"));
+                                // Awesome hack to add "save" and close buttons :D
+                                $("ul.editormd-menu")
+                                    .prepend(
+                                        '<li><a href="javascript:;" id="close_secret_btn" title="Close/Unlock" unselectable="on">\
+                                        <i class="fa fa-close" unselectable="on"></i></a></li>\
+                                        <li><a href="javascript:;" id="editor_update_secret_btn" title="Save" unselectable="on">\
+                                        <i class="fa fa-floppy-o" unselectable="on"></i></a></li>');
+                                $("#close_secret_btn").click(function(){
+                                    var path = get_path();
+                                    path = path.replace('&edit=1', '');
+                                    set_secret("unlocked",editormarkdown.getMarkdown(),false,false,"");
+                                    window.location.href = "#!"+path;
+                                    update_secret_tree();
+                                });
+                                $("#editor_update_secret_btn").click(function(){
+                                    set_secret("updated",editormarkdown.getMarkdown(),false,true,localStorage.getItem("ironvault_username"));
+                                });
+
+                                $('.markdown-toc a').click(function(e) {
+                                    e.preventDefault();
+                                    var hash = this.hash;
+                                    var offset = $('#editormd').outerHeight();
+                                    var target = $("a[name='"+hash.substring(1)+"'].reference-link").offset().top ;
+                                    $('html, body, markdown-body').stop(true, true).animate({ scrollTop: target}, 500, function () {});
+                                    return false;
+                                });
+                            },
+                        });
+                        editormarkdown = editormd("editormd", editor_options);
+                    } else {
+                        $("#functions_buttons").show();
+                        // just show the secret
+                        editormarkdown = editormd.markdownToHTML("editormd", editor_options );
+                        $('div.markdown-toc a').click(function(e) {
                             e.preventDefault();
                             var hash = this.hash;
                             var offset = $('#editormd').outerHeight();
                             var target = $("a[name='"+hash.substring(1)+"'].reference-link").offset().top ;
-                            $('html, body, markdown-body').stop(true, true).animate({ scrollTop: target}, 500, function () {});
+                            $('html, body').stop(true, true).animate({ scrollTop: target}, 500, function () {});
                             return false;
                         });
-                    },
-
+                    }
+                }).fail(function(jqXHR, textStatus, errorThrown){
+                    $('#log_error').html("Secret not found").slideDown().delay(EFFECT_TIME).slideUp();
+                    $("#editors").slideUp(EFFECT_TIME_EDITORS);
                 });
-
-                editormarkdown = editormd("editormd", editor_options);
             } else {
-                $("#functions_buttons").show();
-                // just show the secret
-                editormarkdown = editormd.markdownToHTML("editormd", editor_options );
-                $('div.markdown-toc a').click(function(e) {
-                    e.preventDefault();
-                    var hash = this.hash;
-                    var offset = $('#editormd').outerHeight();
-                    var target = $("a[name='"+hash.substring(1)+"'].reference-link").offset().top ;
-                    $('html, body').stop(true, true).animate({ scrollTop: target}, 500, function () {});
-                    return false;
-                });
+                $("#log_error").html("You cannot read the secret").slideDown().delay(EFFECT_TIME).slideUp();
             }
-        }).fail(function(jqXHR, textStatus, errorThrown){
-            $('#log_error').html("Secret not found").slideDown().delay(EFFECT_TIME).slideUp();
-            $("#editors").slideUp(EFFECT_TIME_EDITORS);
-        });
-    }
+        }
+    });
 }
 
 function browse_secret_backups(){
@@ -509,21 +571,8 @@ function browse_secret_backups(){
             $("#backups_table_body").append(tr);
         });
         $("#backups_modal").modal("show");
-    });
-}
-
-function browse_secrets(path){
-    $("#editors").slideUp(EFFECT_TIME_EDITORS);
-    $("#create_secret").show();
-    $("#editormd").empty();
-    make_action("LIST",path).fail(function(jqXHR, textStatus, errorThrown){
-        if (jqXHR.status != 200){
-            if (jqXHR.readyState == 0){
-                $('#log_error').html("Network Error").slideDown().delay(EFFECT_TIME).slideUp();
-            } else {
-                $('#log_error').html(jqXHR.statusText).slideDown().delay(EFFECT_TIME).slideUp();
-            }
-        }
+    }).fail(function(jqXHR, textStatus, errorThrown){
+        $("#log_error").html("There are no backups or there has been an error: " + errorThrown).slideDown().delay(EFFECT_TIME).slideUp();
     });
 }
 
