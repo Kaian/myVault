@@ -47,7 +47,7 @@ path "/sys/capabilities" {
 We expect three kind of users.
 
 ### admins
-Admin users, who can do everything inside **myVault** to edit/move/delete secrets and backups. See **[vault_config/admins.hcl]()**
+Admin users, who can do everything inside **myVault** to edit/move/delete secrets and backups. See **[vault_config/admins.hcl](vault_config/admins.hcl)**
 
 To add this policy:
 
@@ -57,7 +57,7 @@ vault policy-write admins admins.hcl
 
 
 ### users with privileges
-Normal users. Could create new secrets and backups, but not delete any of them. See **[vault_config/users.hcl]()**
+Normal users. Could create new secrets and backups, but not delete any of them. See **[vault_config/users.hcl](vault_config/users.hcl)**
 
 ```
 vault policy-write users users.hcl
@@ -71,7 +71,7 @@ Limited users. The idea is to let clients to see secrets that could belongs to t
 
 A "client" user can see the secrets within its path, and the backups, but cannot edit or delete them.
 
-See **[vault_config/clientes_xxx.hcl]()** as example.
+See **[vault_config/clientes_xxx.hcl](vault_config/clientes_xxx.hcl)** as example.
 
 To add a "cliente" as example:
 

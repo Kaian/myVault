@@ -6,7 +6,7 @@ It's written in static HTML and Javascript using [Jquery](https://jquery.com/)
 
 There's no intention to add features to configure Vault backend. But will see... 
 
-**my Vault** has been created for using in a custom scenario, so maybe it will not fit into your needs. But of course, you can clone this project and modify for your needs if you want, or you can tell me to modify it if you want new features
+**myVault** has been created for using in a custom scenario, so maybe it will not fit into your needs. But of course, you can clone this project and modify for your needs if you want, or you can tell me to modify it if you want new features
 
 ## Features
 * Browse all the secrets (depends on your permissions)
