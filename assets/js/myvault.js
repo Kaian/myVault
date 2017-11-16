@@ -59,6 +59,16 @@ function login(method){
             localStorage.setItem("ironvault_token", res.data.id);
             localStorage.setItem("ironvault_username", res.data.display_name);
         }
+        $.each(res.auth.policies.sort(),function(index,value){
+            if (value.substring(0,9) == "clientes_"){
+                var regexp = /^clientes_/;
+                var value = value.replace(regexp,"");
+                DEFAULT_SECRET_PATH = "/secret/clientes/"+value+"/";
+                localStorage.setItem("ironvault_path", DEFAULT_SECRET_PATH);
+                BACKUP_SECRET_PATH  = "/backup"+DEFAULT_SECRET_PATH;
+                localStorage.setItem("ironvault_backup_path", BACKUP_SECRET_PATH);
+            }
+        });
         $("#login_modal").modal("hide");
         is_logged();
     }).fail(function(jqXHR, textStatus, errorThrown){
