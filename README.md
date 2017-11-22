@@ -12,7 +12,7 @@ There's no intention to add features to configure Vault backend. But will see...
 * Browse all the secrets (depends on your permissions)
 * View them
 * Edit secrets with a fully Markdown editor (using [Editor.md](https://github.com/pandao/editor.md))
-* Save modifications
+* Auto-save secret modifications and auto-close/auto-unlock if not has been changed in minutes.
 * Print secrets
 * Automatic logout for security reasons
 * Automatic backup every time a secret is changed

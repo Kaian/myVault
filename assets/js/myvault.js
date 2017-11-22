@@ -6,9 +6,11 @@ var BACKUP_SECRET_PATH  = "/backup/";
 var EFFECT_TIME = 1750;
 var EFFECT_TIME_EDITORS = 200;
 var DEFAULT_TIMER = 15*60*1000; //minutes*secs*milliseconds
+var DEFAULT_AUTO_SAVE_TIMER = 3*60*1000;
 var path_array = [];
 
 var TIMER = setInterval(automatic_logout, DEFAULT_TIMER);
+var AUTO_SAVE_TIMER = false;
 // end global variables
 
 function save_options(){
@@ -31,6 +33,7 @@ function save_options(){
         localStorage.setItem("ironvault_backup_path", BACKUP_SECRET_PATH);
     }
     localStorage.setItem("ironvault_logout_timer",$("#input_logout_timer").val()*60*1000);
+    localStorage.setItem("ironvault_autosave_timer",$("#input_autosave_timer").val()*60*1000);
     $("#options-modal").modal("hide");
 }
 
@@ -118,6 +121,15 @@ function automatic_logout(){
 function reset_timer(){
     window.clearInterval(TIMER)
     TIMER = setInterval(automatic_logout, localStorage.getItem("ironvault_logout_timer") || DEFAULT_TIMER);
+}
+
+function reset_auto_save_timer(active_timer,action="",data="",create="",backup="",username=""){
+    window.clearInterval(AUTO_SAVE_TIMER);
+    console.log(active_timer,action,data,create,backup,username)
+    if (active_timer){
+        //set_secret(action,data,create,backup,username)
+        AUTO_SAVE_TIMER = setInterval(set_secret.bind(null,action,data,create,backup,username), localStorage.getItem("ironvault_autosave_timer") || DEFAULT_AUTO_SAVE_TIMER);
+    }
 }
 
 function is_logged(){
@@ -389,6 +401,11 @@ function set_secret(action,data,create,backup,username){
         if (action == "unlocked"){
             get_secret();
         }
+        if (action == "auto-saved"){
+            var params= path.split("&")
+            path = params[0];
+            window.location.href = "#!"+path;
+        }
     }).fail(function(jqXHR, textStatus, errorThrown){
         $("#log_error").html("Secret has NOT been "+action+"<br/><br/>ERROR: "+errorThrown);
         $("#log_error").slideDown().delay(EFFECT_TIME).slideUp();
@@ -506,6 +523,7 @@ function get_secret(){
                                 var keyMap = {
                                     "Ctrl-S": function(cm) {
                                         set_secret("updated",editormarkdown.getMarkdown(),false,true,localStorage.getItem("ironvault_username"));
+                                        reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,false,"");
                                     },
                                     "Ctrl-Q": function(cm) {
                                         var path = get_path();
@@ -518,6 +536,7 @@ function get_secret(){
                                 this.addKeyMap(keyMap);
                                 
                                 set_secret("locked",editormarkdown.getMarkdown(),false,false,localStorage.getItem("ironvault_username"));
+                                reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,false,"");
                                 // Awesome hack to add "save" and close buttons :D
                                 $("ul.editormd-menu")
                                     .prepend(
@@ -529,11 +548,12 @@ function get_secret(){
                                     var path = get_path();
                                     path = path.replace('&edit=1', '');
                                     set_secret("unlocked",editormarkdown.getMarkdown(),false,false,"");
-                                    window.location.href = "#!"+path;
                                     update_secret_tree();
+                                    window.location.href = "#!"+path;
                                 });
                                 $("#editor_update_secret_btn").click(function(){
                                     set_secret("updated",editormarkdown.getMarkdown(),false,true,localStorage.getItem("ironvault_username"));
+                                    reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,false,"");
                                 });
 
                                 $('.markdown-toc a').click(function(e) {
@@ -544,6 +564,9 @@ function get_secret(){
                                     $('html, body, markdown-body').stop(true, true).animate({ scrollTop: target}, 500, function () {});
                                     return false;
                                 });
+                            },
+                            onchange : function() {
+                                reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,true,"");
                             },
                         });
                         editormarkdown = editormd("editormd", editor_options);
@@ -605,6 +628,7 @@ function browse_secret_backups(){
 }
 
 function hash_changed(){
+    reset_auto_save_timer(false);
     get_secret();
     reset_timer();
 }
