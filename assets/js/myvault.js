@@ -97,14 +97,16 @@ function get_path(){
 
 function logout(error){
     if (localStorage.getItem("ironvault_token")){
+        //revoke token
+        make_action("PUT","/auth/token/revoke-self");
         localStorage.removeItem('ironvault_token');
         $("#login_modal").modal("show");
         //clean inputs
         $("#username, #password, #token").val("");
         $("#login_error").html(error).slideDown().delay(EFFECT_TIME).slideUp();
-        //revoke token
-        make_action("PUT","/auth/token/revoke-self");
     }
+    localStorage.removeItem('ironvault_path');
+    localStorage.removeItem('ironvault_backup_path');
 }
 
 function automatic_logout(){
