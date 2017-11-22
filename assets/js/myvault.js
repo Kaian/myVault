@@ -125,7 +125,6 @@ function reset_timer(){
 
 function reset_auto_save_timer(active_timer,action="",data="",create="",backup="",username=""){
     window.clearInterval(AUTO_SAVE_TIMER);
-    console.log(active_timer,action,data,create,backup,username)
     if (active_timer){
         //set_secret(action,data,create,backup,username)
         AUTO_SAVE_TIMER = setInterval(set_secret.bind(null,action,data,create,backup,username), localStorage.getItem("ironvault_autosave_timer") || DEFAULT_AUTO_SAVE_TIMER);
