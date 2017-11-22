@@ -492,7 +492,7 @@ function get_secret(){
                             toolbarIcons : function(){
                                 return ["undo", "redo", "|",
                                     "bold", "del", "italic", "quote", "|",
-                                    "h1", "h2", "h3", "h4", "h5", "h6", "|",
+                                    "h1", "h2", "h3", "h4", "|",
                                     "list-ul", "list-ol", "hr", "|",
                                     "link", "reference-link", "image", "code",
                                     "code-block",
@@ -501,6 +501,20 @@ function get_secret(){
                                 ]
                             },
                             onload : function() {
+                                var keyMap = {
+                                    "Ctrl-S": function(cm) {
+                                        set_secret("updated",editormarkdown.getMarkdown(),false,true,localStorage.getItem("ironvault_username"));
+                                    },
+                                    "Ctrl-Q": function(cm) {
+                                        var path = get_path();
+                                        path = path.replace('&edit=1', '');
+                                        set_secret("unlocked",editormarkdown.getMarkdown(),false,false,"");
+                                        window.location.href = "#!"+path;
+                                        update_secret_tree();
+                                    }
+                                };
+                                this.addKeyMap(keyMap);
+                                
                                 set_secret("locked",editormarkdown.getMarkdown(),false,false,localStorage.getItem("ironvault_username"));
                                 // Awesome hack to add "save" and close buttons :D
                                 $("ul.editormd-menu")
