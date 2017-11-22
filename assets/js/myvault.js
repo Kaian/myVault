@@ -107,6 +107,8 @@ function logout(error){
     }
     localStorage.removeItem('ironvault_path');
     localStorage.removeItem('ironvault_backup_path');
+    $("#editormd").empty();
+    $("#tree").empty();
 }
 
 function automatic_logout(){
