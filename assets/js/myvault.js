@@ -90,10 +90,16 @@ function get_token(){
     return localStorage.getItem("ironvault_token");
 }
 
-function get_path(){
+function get_path(in_editor=false){
     var hash = window.location.hash.substring(2);
     if (hash.length == 0){
         hash =  DEFAULT_SECRET_PATH;
+    }
+    if (in_editor){
+        if (hash.indexOf("&")>0){
+            var params= hash.split("&")
+            hash = params[0];
+        }
     }
     return hash;
 }
@@ -125,6 +131,7 @@ function reset_timer(){
 
 function reset_auto_save_timer(active_timer,action="",data="",create="",backup="",username=""){
     window.clearInterval(AUTO_SAVE_TIMER);
+    AUTO_SAVE_TIMER = false;
     if (active_timer){
         //set_secret(action,data,create,backup,username)
         AUTO_SAVE_TIMER = setInterval(set_secret.bind(null,action,data,create,backup,username), localStorage.getItem("ironvault_autosave_timer") || DEFAULT_AUTO_SAVE_TIMER);
@@ -253,13 +260,9 @@ function update_secret_tree(){
 }
 
 function update_breadcrumb() {
-    path = get_path() || DEFAULT_SECRET_PATH;
+    path = get_path(true) || DEFAULT_SECRET_PATH;
     $("#create_secret_path").html(path);
     var path = path.substring(1);
-    if (path.indexOf("&")>0){
-        var params= path.split("&")
-        path = params[0];
-    }
     var complete_path="#!";
     $("#secret_path").empty();
     var i = 0;
@@ -384,11 +387,7 @@ function set_secret(action,data,create,backup,username){
     if (action == "created"){
         path = $("#create_secret_path").html()+$("#new_secret_name").val();
     } else {
-        path = get_path();
-        if (path.indexOf("&")>0){
-            var params= path.split("&")
-            path = params[0];
-        }
+        path = get_path(true);
     }
 
     set_vault_secret(path,data,backup,username).done(function(response, textStatus, jqXHR){
@@ -626,10 +625,25 @@ function browse_secret_backups(){
     });
 }
 
-function hash_changed(){
-    reset_auto_save_timer(false);
-    get_secret();
-    reset_timer();
+function hash_changed(event){
+    if (AUTO_SAVE_TIMER == false){
+        reset_auto_save_timer(false);
+        get_secret();
+        reset_timer();
+    } else {
+        if (event.oldURL.indexOf("&")>0){
+            if (event.oldURL == (event.newURL+"&edit=1")){
+                window.location = event.newURL;
+                reset_auto_save_timer(false);
+                reset_timer();
+                get_secret();
+            } else {
+                window.location = event.oldURL;
+                $("#warning_modal span#hidden_new_url").html(event.newURL);
+                $("#warning_modal").modal("show");
+            }
+        }
+    }
 }
 
 $(document).ready(function(){

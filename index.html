@@ -123,6 +123,7 @@
   <div id="modal_move"></div>
   <div id="modal_delete"></div>
   <div id="modal_backups"></div>
+  <div id="modal_warning"></div>
 
   <!-- login Modal -->
     <div class="modal fade" id="login_modal" tabindex="-1" role="dialog" aria-labelledby="login_modal_label" aria-hidden="" data-keyboard="false" data-backdrop="static">
@@ -202,6 +203,7 @@
         $("#modal_move").load("move_modal.html");
         $("#modal_delete").load("delete_modal.html");
         $("#modal_backups").load("backups_modal.html");
+        $("#modal_warning").load("warning_modal.html");
         $('[data-toggle="tooltip"]').tooltip()
         $("#save_preferences").click(function(){
             save_options();
