@@ -433,6 +433,7 @@ function get_secret(){
             $("#editors").slideUp(EFFECT_TIME_EDITORS);
             if (capabilities_allow(capabilities,"create") || capabilities_allow(capabilities,"update")) {
                 $("#create_secret").show();
+                $("#new_secret_name").val("");
             } else {
                 $("#log_info").html("You have no permissions to create a secret here").slideDown().delay(EFFECT_TIME).slideUp();
             }
