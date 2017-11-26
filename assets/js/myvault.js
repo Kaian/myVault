@@ -55,15 +55,18 @@ function login(method){
     }
 
     make_action(action,path,data,headers).done(function(res) {
+        var policies = [];
         if (method == "ldap"){
             localStorage.setItem("ironvault_token", res.auth.client_token);
             localStorage.setItem("ironvault_accessor", res.auth.accessor);
             localStorage.setItem("ironvault_username", res.auth.metadata.username);
+            policies = res.auth.policies.sort();
         } else if (method == "token"){
             localStorage.setItem("ironvault_token", res.data.id);
             localStorage.setItem("ironvault_username", res.data.display_name);
+            policies = res.data.policies.sort();
         }
-        $.each(res.auth.policies.sort(),function(index,value){
+        $.each(policies,function(index,value){
             if (value.substring(0,9) == "clientes_"){
                 var regexp = /^clientes_/;
                 var value = value.replace(regexp,"");
