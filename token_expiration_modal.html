@@ -1,0 +1,28 @@
+<!-- move Modal -->
+<div class="modal fade" id="token_expiration_warning_modal" tabindex="-1" role="dialog" aria-labelledby="token_expiration_warning_modal_label" aria-hidden="" data-keyboard="false" data-backdrop="static">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Your token will expire in less than</h5>
+        <h5 id="token_timer_minutes" class="modal-title"> XXX</h5>
+        <h5 class="modal-title">minutes</h5>
+        
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>Save and close any secret that you are editing </p>
+      </div>
+      <div class="modal-footer">
+        <button id="cancel_token_expiration_warning_btn" type="button" class="btn btn-danger">OK, I'm aware</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- END Modal -->
+<script type="text/javascript">
+    $("#cancel_token_expiration_warning_btn").click(function(){
+        $("#token_expiration_warning_modal").modal("hide");
+    });
+</script>

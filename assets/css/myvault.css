@@ -41,7 +41,7 @@
 nav.bg-dark {
     background-color: #2e2d30!important;
 }
-a.navbar-dark a.navbar-dark {
+a.navbar-dark {
     color: #b0232a!important;
 }
 
@@ -94,7 +94,7 @@ nav#footer {
     height: 30px;
 }
 
-a.nav-link , #footer a .fa-heart {
+a.nav-link , #footer a .fa-heart, h5#token_timer_minutes {
     color: #b0232a;
 }
 

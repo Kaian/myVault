@@ -49,9 +49,12 @@
         </ul>
 
         <ul class="navbar-nav  my-2 my-lg-0">
+          <li class="nav-item">
+            <a id="token-timer" class="navbar-brand navbar-dark" data-toggle="tooltip" title="Token expiration time"></a>
+          </li>
           <li class="nav-item active">
             <a class="navbar-brand">
-              <i id="gear-icon" class="fa fa-cog fa-inverse" aria-hidden="true" data-toggle="modal" data-target="#options-modal"></i>
+              <i id="gear-icon" class="fa fa-cog fa-inverse" aria-hidden="true" data-toggle="modal" data-target="#options-modal" title="Preferences"></i>
             </a>
           </li>
           <li class="nav-item active">
@@ -124,6 +127,7 @@
   <div id="modal_delete"></div>
   <div id="modal_backups"></div>
   <div id="modal_warning"></div>
+  <div id="modal_token_expiration"></div>
 
   <!-- login Modal -->
     <div class="modal fade" id="login_modal" tabindex="-1" role="dialog" aria-labelledby="login_modal_label" aria-hidden="" data-keyboard="false" data-backdrop="static">
@@ -204,6 +208,7 @@
         $("#modal_delete").load("delete_modal.html");
         $("#modal_backups").load("backups_modal.html");
         $("#modal_warning").load("warning_modal.html");
+        $("#modal_token_expiration").load("token_expiration_modal.html");
         $('[data-toggle="tooltip"]').tooltip()
         $("#save_preferences").click(function(){
             save_options();

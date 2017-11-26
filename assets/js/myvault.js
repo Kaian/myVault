@@ -11,6 +11,7 @@ var path_array = [];
 
 var TIMER = setInterval(automatic_logout, DEFAULT_TIMER);
 var AUTO_SAVE_TIMER = false;
+var TOKEN_EXPIRATION_TIMER = setInterval(show_token_expiration_warning, 60*1000);
 // end global variables
 
 function save_options(){
@@ -56,15 +57,27 @@ function login(method){
 
     make_action(action,path,data,headers).done(function(res) {
         var policies = [];
+        var expiration_time = 0;
         if (method == "ldap"){
             localStorage.setItem("ironvault_token", res.auth.client_token);
             localStorage.setItem("ironvault_accessor", res.auth.accessor);
             localStorage.setItem("ironvault_username", res.auth.metadata.username);
             policies = res.auth.policies.sort();
+            expiration_time = Math.floor(new Date().getTime()/1000) + res.auth.lease_duration;
         } else if (method == "token"){
             localStorage.setItem("ironvault_token", res.data.id);
             localStorage.setItem("ironvault_username", res.data.display_name);
             policies = res.data.policies.sort();
+            // expir_time is null when root token
+            if (res.data.expire_time != null){
+                expiration_time = res.data.creation_time + res.data.creation_ttl;
+            }
+        }
+        localStorage.setItem("ironvault_token_expiration_time",expiration_time);
+        if (expiration_time > 0){
+            var now = Math.floor(new Date().getTime()/1000);
+            var minutes = Math.floor((expiration_time-now)/60);
+            $("#token-timer").html(minutes + " mins");
         }
         $.each(policies,function(index,value){
             if (value.substring(0,9) == "clientes_"){
@@ -94,6 +107,22 @@ function get_token(){
     return localStorage.getItem("ironvault_token");
 }
 
+function show_token_expiration_warning(){
+    var now = Math.floor(new Date().getTime()/1000);
+    var expiration = localStorage.getItem("ironvault_token_expiration_time");
+    if (expiration > 0){
+        minutes = Math.floor((expiration-now)/60);
+        console.log(minutes);
+        $("#token-timer").html(minutes + " mins");
+        if (minutes < 5 && minutes > 1){
+            $("#token_timer_minutes").html(minutes);
+            $("#token_expiration_warning_modal").modal("show");
+        } else if (minutes < 1){
+            logout("Token has expired");
+        }
+    }
+}
+
 function get_path(in_editor=false){
     var hash = window.location.hash.substring(2);
     if (hash.length == 0){
@@ -120,6 +149,9 @@ function logout(error){
     }
     localStorage.removeItem('ironvault_path');
     localStorage.removeItem('ironvault_backup_path');
+    localStorage.removeItem('ironvault_token_expiration_time');
+    window.clearInterval(TIMER);
+    window.clearInterval(TOKEN_EXPIRATION_TIMER);
     $("#editormd").empty();
     $("#tree").empty();
 }
