@@ -34,6 +34,7 @@ function save_options(){
     }
     localStorage.setItem("ironvault_logout_timer",$("#input_logout_timer").val()*60*1000);
     localStorage.setItem("ironvault_autosave_timer",$("#input_autosave_timer").val()*60*1000);
+    localStorage.setItem("ironvault_keep_editor_autosave",$("#check_keep_editor").is(":checked"));
     $("#options-modal").modal("hide");
 }
 
@@ -402,7 +403,9 @@ function set_secret(action,data,create,backup,username){
         if (action == "auto-saved"){
             var params= path.split("&")
             path = params[0];
-            window.location.href = "#!"+path;
+            if (localStorage.getItem("ironvault_keep_editor_autosave") != "true") {
+                window.location.href = "#!"+path;
+            }
         }
     }).fail(function(jqXHR, textStatus, errorThrown){
         $("#log_error").html("Secret has NOT been "+action+"<br/><br/>ERROR: "+errorThrown);
