@@ -112,15 +112,29 @@ function show_token_expiration_warning(){
     var expiration = localStorage.getItem("ironvault_token_expiration_time");
     if (expiration > 0){
         minutes = Math.floor((expiration-now)/60);
-        console.log(minutes);
         $("#token-timer").html(minutes + " mins");
         if (minutes < 5 && minutes > 1){
             $("#token_timer_minutes").html(minutes);
             $("#token_expiration_warning_modal").modal("show");
+            $("#token-refresh-icon").show();
         } else if (minutes < 1){
             logout("Token has expired");
         }
     }
+}
+
+function renew_token(){
+    var token = get_token();
+    data = {increment: "2h"};
+    make_action("POST","/auth/token/renew-self",data).done(function(response, textStatus, jqXHR){
+        var now = Math.floor(new Date().getTime()/1000);
+        var expiration = parseInt(localStorage.getItem("ironvault_token_expiration_time"))+7200;
+        localStorage.setItem("ironvault_token_expiration_time",expiration);
+        $("#token-refresh-icon").hide();
+        minutes = Math.floor((expiration-now)/60);
+        $("#token-timer").html(minutes + " mins");
+        $("#log_success").html("Token has been renewed ").slideDown().delay(EFFECT_TIME).slideUp();
+    });
 }
 
 function get_path(in_editor=false){

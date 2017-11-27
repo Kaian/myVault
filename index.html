@@ -52,8 +52,13 @@
           <li class="nav-item">
             <a id="token-timer" class="navbar-brand navbar-dark" data-toggle="tooltip" title="Token expiration time"></a>
           </li>
+          <li class="nav-item">
+            <a id="token-renewer" class="navbar-brand navbar-dark" data-toggle="tooltip" title="Renew token expiration time">
+                <i id="token-refresh-icon" class="fa fa-refresh fa-inverse" aria-hidden="true" data-toggle="modal" data-target="" style="display:none"></i>
+            </a>
+          </li>
           <li class="nav-item active">
-            <a class="navbar-brand">
+            <a id="preferences-gear-icon" class="navbar-brand">
               <i id="gear-icon" class="fa fa-cog fa-inverse" aria-hidden="true" data-toggle="modal" data-target="#options-modal" title="Preferences"></i>
             </a>
           </li>
@@ -210,6 +215,9 @@
         $("#modal_warning").load("warning_modal.html");
         $("#modal_token_expiration").load("token_expiration_modal.html");
         $('[data-toggle="tooltip"]').tooltip()
+        $("#token-renewer").click(function(){
+            renew_token();
+        });
         $("#save_preferences").click(function(){
             save_options();
         });

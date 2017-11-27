@@ -105,3 +105,7 @@ body.modal-open #todo{
     -ms-filter: blur(15px);
     filter: blur(15px);
 }
+
+a#token-renewer:hover, a#preferences-gear-icon:hover {
+    cursor:pointer;
+}
