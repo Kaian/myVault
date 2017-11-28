@@ -219,9 +219,9 @@ function capabilities_allow(capabilities,policy){
 
 function get_capabilities(path){
     var token = get_token();
-    data = {path: path.substring(1),token: token}
+    data = {path: path.substring(1)}
     var promise = new Promise((resolve, reject) => {
-        make_action("POST","/sys/capabilities",data).done(function(response, textStatus, jqXHR){
+        make_action("POST","/sys/capabilities-self",data).done(function(response, textStatus, jqXHR){
             resolve(jqXHR.responseJSON.capabilities);
         });
     });
