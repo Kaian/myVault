@@ -9,7 +9,7 @@ var DEFAULT_TIMER = 15*60*1000; //minutes*secs*milliseconds
 var DEFAULT_AUTO_SAVE_TIMER = 3*60*1000;
 var path_array = [];
 
-var TIMER = setInterval(automatic_logout, DEFAULT_TIMER);
+var TIMER = false;
 var AUTO_SAVE_TIMER = false;
 var TOKEN_EXPIRATION_TIMER = setInterval(show_token_expiration_warning, 60*1000);
 // end global variables
@@ -90,12 +90,15 @@ function login(method){
             }
         });
         $("#login_modal").modal("hide");
+        reset_timer();
+        window.clearInterval(TOKEN_EXPIRATION_TIMER);
+        TOKEN_EXPIRATION_TIMER = setInterval(show_token_expiration_warning, 60*1000);
         is_logged();
     }).fail(function(jqXHR, textStatus, errorThrown){
         if (jqXHR.readyState == 0){
             logout("There's a network error");
-            $('#log_error').slideDown().delay(EFFECT_TIME).slideUp();
-        } 
+            $("#log_error").slideDown().delay(EFFECT_TIME).slideUp();
+        }
         if (jqXHR.status >= 400) {
             $("#login_error").html(jqXHR.responseJSON.errors[0]).slideDown().delay(EFFECT_TIME).slideUp();
         }
@@ -175,7 +178,7 @@ function automatic_logout(){
 }
 
 function reset_timer(){
-    window.clearInterval(TIMER)
+    window.clearInterval(TIMER);
     TIMER = setInterval(automatic_logout, localStorage.getItem("ironvault_logout_timer") || DEFAULT_TIMER);
 }
 
