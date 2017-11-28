@@ -301,13 +301,26 @@ function update_secret_tree(){
 
         // search tree
         var findExpandibleNodess = function() {
-            return keys_tree.treeview('search', [ $('#input_search_tree').val(), { ignoreCase: true, exactMatch: false } ]);
+            return keys_tree.treeview("search", [ $("#input_search_tree").val(), { ignoreCase: true, exactMatch: false } ]);
         };
         var expandibleNodes = findExpandibleNodess();
+        
+        var search = function(e) {
+            var pattern = $("#input_search_tree").val();
+            var results = keys_tree.treeview('search', [ pattern, { ignoreCase: true, exactMatch: false } ]);
+            var output = '<p>' + results.length + ' matches found</p>';
+            $.each(results, function (index, result) {
+                output += '<p><a href="'+result.href+'">'+result.text+"</a></p>";
+            });
+            $("#search_results").html(output);
+            $("#search_results").show();
+        }
+        
         // Expand/collapse/toggle nodes
         $('#input_search_tree').on('keyup', function (e) {
             expandibleNodes = findExpandibleNodess();
             $('.expand-node').prop('disabled', !(expandibleNodes.length >= 1));
+            search();
         });
     });
 }
@@ -514,6 +527,7 @@ function get_secret(){
                 make_action("GET",path).done(function(response, textStatus, jqXHR){
                     $("#editors").slideDown(EFFECT_TIME_EDITORS);
                     $("#editormd textarea").text(response.data["data"]);
+                    $("#search_results").hide();
 
                     if (response.data["username"]){
                         edit = false;
