@@ -483,7 +483,7 @@ function get_secret(){
             $("#editormd").empty();
             //directory
             $("#editors").slideUp(EFFECT_TIME_EDITORS);
-            if (capabilities_allow(capabilities,"create") || capabilities_allow(capabilities,"update")) {
+            if (capabilities_allow(capabilities,"create")) {
                 $("#create_secret").show();
                 $("#new_secret_name").val("");
             } else {
