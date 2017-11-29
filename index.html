@@ -93,6 +93,7 @@
           <div id="search_results"></div>
 
           <div id="create_secret" class="col-md-8" style="display:none;">
+            <form id="create_secret_form" action='javascript:set_secret("created","",true,false,"");' autocomplete="off">
               <div class="input-group">
                 <span  id="create_secret_path" class="input-group-addon">/path/</span>
                 <input id="new_secret_name" class="form-control" type="text"  placeholder="secret_name">
@@ -100,6 +101,7 @@
                   <button id="create_secret_btn" class="btn btn-success" type="button">Create!</button>
                 </span>
               </div>
+            </form>
           </div>
 
           <div id="editors" style="display:none">
