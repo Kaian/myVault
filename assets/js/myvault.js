@@ -304,18 +304,18 @@ function update_secret_tree(){
             return keys_tree.treeview("search", [ $("#input_search_tree").val(), { ignoreCase: true, exactMatch: false } ]);
         };
         var expandibleNodes = findExpandibleNodess();
-        
         var search = function(e) {
             var pattern = $("#input_search_tree").val();
             var results = keys_tree.treeview('search', [ pattern, { ignoreCase: true, exactMatch: false } ]);
-            var output = '<p>' + results.length + ' matches found</p>';
+            var output = '<p>' + results.length + ' matches found</p><ul id="search_results">';
             $.each(results, function (index, result) {
-                output += '<p><a href="'+result.href+'">'+result.text+"</a></p>";
+                var href = result.href.replace("#!","");
+                output += '<li class="search_result"><a href="'+result.href+'">'+href+"</a></li>";
             });
+            output += "</li>";
             $("#search_results").html(output);
             $("#search_results").show();
         }
-        
         // Expand/collapse/toggle nodes
         $('#input_search_tree').on('keyup', function (e) {
             expandibleNodes = findExpandibleNodess();
@@ -567,7 +567,7 @@ function get_secret(){
                         var editormarkdown = "";
                         $("#functions_buttons").hide();
 
-                        // extending editor.md 
+                        // extending editor.md
                         $.extend(editor_options,{
                             width              : "100%",
                             path               : "deps/editor.md/lib/",
@@ -602,7 +602,7 @@ function get_secret(){
                                     }
                                 };
                                 this.addKeyMap(keyMap);
-                                
+
                                 set_secret("locked",editormarkdown.getMarkdown(),false,false,localStorage.getItem("ironvault_username"));
                                 reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,false,"");
                                 // Awesome hack to add "save" and close buttons :D

@@ -110,3 +110,11 @@ body.modal-open #todo{
 a#token-renewer:hover, a#preferences-gear-icon:hover {
     cursor:pointer;
 }
+
+#search_results a{
+    color: #495057;
+}
+
+ul#search_results {
+    list-style-type: none;
+}
