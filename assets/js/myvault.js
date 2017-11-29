@@ -282,6 +282,24 @@ function get_tree(path) {
     return promise;
 }
 
+function collapse_tree_nodes(){
+    $('#tree').treeview('clearSearch');
+    var secret = $('#tree').treeview('getSelected');
+    var parents = [];
+    var n = $('#tree').treeview('getParent', secret[0].nodeId);
+    parents.push(n.nodeId);
+    while (parents[parents.length-1] != undefined){
+        var n = $('#tree').treeview('getParent', n.nodeId);
+        parents.push(n.nodeId);
+    }
+    $('#tree').treeview('collapseAll', { silent: true });
+    $.each(parents.reverse(), function (index, parent) {
+        if (parent != undefined){
+            $('#tree').treeview('expandNode', [ parent, { levels: 1, silent: true } ]);
+        }
+    });
+}
+
 function update_secret_tree(){
     get_tree(DEFAULT_SECRET_PATH).then(function (data) {
         var keys_tree = $("#tree").treeview({
@@ -521,6 +539,7 @@ function get_secret(){
             $("#editormd").empty().removeAttr('class').css('height', 'auto');
             $("#editormd").append('<textarea style="display:none">');
             $(".button").hide();
+            collapse_tree_nodes();
 
             if (capabilities_allow(capabilities,"read")) {
 
