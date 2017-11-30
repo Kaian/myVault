@@ -314,6 +314,7 @@ function update_secret_tree(){
         });
         // search tree
         var findExpandibleNodess = function() {
+            $('#tree').treeview('collapseAll', { silent: true });
             return keys_tree.treeview("search", [ $("#input_search_tree").val(), { ignoreCase: true, exactMatch: false } ]);
         };
         var expandibleNodes = findExpandibleNodess();
