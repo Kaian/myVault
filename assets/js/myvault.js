@@ -108,7 +108,12 @@ function login(method){
 }
 
 function get_token(){
-    return localStorage.getItem("ironvault_token");
+    var token = localStorage.getItem("ironvault_token");
+    // if (token == null){
+    //     logout("There's no valid token");
+    // } else {
+        return token;
+    // }
 }
 
 function show_token_expiration_warning(){
@@ -162,12 +167,9 @@ function get_path(in_editor=false){
 function logout(error){
     if (localStorage.getItem("ironvault_token")){
         //revoke token
-        make_action("PUT","/auth/token/revoke-self");
-        localStorage.removeItem('ironvault_token');
-        $("#login_modal").modal("show");
-        //clean inputs
-        $("#username, #password, #token").val("");
-        $("#login_error").html(error).slideDown().delay(EFFECT_TIME).slideUp();
+        make_action("POST","/auth/token/revoke-self").done(function(response, textStatus, jqXHR){
+            localStorage.removeItem('ironvault_token');
+        });
     }
     localStorage.removeItem('ironvault_path');
     localStorage.removeItem('ironvault_backup_path');
@@ -177,7 +179,10 @@ function logout(error){
     window.clearInterval(AUTO_SAVE_TIMER);
     $("#editormd").empty();
     $("#tree").empty();
-    // reset TIMERs
+    $("#login_modal").modal("show");
+    //clean inputs
+    $("#username, #password, #token").val("");
+    $("#login_error").html(error).slideDown().delay(EFFECT_TIME).slideUp();
 }
 
 function automatic_logout(){
@@ -235,13 +240,19 @@ function capabilities_allow(capabilities,policy){
 
 function get_capabilities(path){
     var token = get_token();
-    data = {path: path.substring(1)}
-    var promise = new Promise((resolve, reject) => {
-        make_action("POST","/sys/capabilities-self",data).done(function(response, textStatus, jqXHR){
-            resolve(jqXHR.responseJSON.capabilities);
+    if (token == null){
+        logout("There's no valid token");
+    } else {
+        data = {path: path.substring(1)}
+        var promise = new Promise((resolve, reject) => {
+            make_action("POST","/sys/capabilities-self",data).done(function(response, textStatus, jqXHR){
+                resolve(jqXHR.responseJSON.capabilities);
+            }).fail(function(jqXHR, textStatus, errorThrown){
+                logout("There's no valid token");
+            });
         });
-    });
-    return promise;
+        return promise;
+    }
 }
 
 function get_tree(path) {
