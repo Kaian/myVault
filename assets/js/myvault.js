@@ -408,15 +408,20 @@ function make_action(action,path,data="",headers=""){
     if (headers == ""){
         headers = {"X-Vault-Token": token};
     }
-    return $.ajax({
+    var options = {
         type: action,
         headers: headers,
         url: VAULT_URL+path.substring(1),
         timeout: 5000,
         dataType: "json",
-        data: JSON.stringify(data),
         contentType: "application/json"
-    });
+    }
+    var data_object = {};
+    if (data != ""){
+        data_object = {data: JSON.stringify(data)};
+    }
+    $.extend(options,data_object);
+    return $.ajax(options);
 }
 
 function set_vault_secret(path,data,backup=true,username=""){
