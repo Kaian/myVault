@@ -525,13 +525,15 @@ function get_secret(){
     var token = get_token();
     var path = get_path();
     var edit = false;
+    var edit_url = false;
     $("#create_secret").hide();
     $("#log_info").hide();
     if (path.indexOf("&")>0){
         var params= path.split("&")
         path = params[0];
         if (params[1].split("=")[0] == "edit"){
-            edit = true
+            edit = true;
+            edit_url = true;
         }
     }
     update_breadcrumb();
@@ -573,6 +575,10 @@ function get_secret(){
                     $("#search_results").hide();
 
                     if (response.data["username"]){
+                        if (edit_url){
+                            console.log(edit_url);
+                            window.location.href = "#!"+path;
+                        }
                         edit = false;
                         $("#log_info").html("Secret is locked by <b>'" + response.data["username"] + "'</b>").slideDown();
                         if (capabilities_allow(capabilities,"create") || capabilities_allow(capabilities,"update")) {
