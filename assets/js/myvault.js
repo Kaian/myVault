@@ -5,13 +5,14 @@ var DEFAULT_SECRET_PATH = "/secret/";
 var BACKUP_SECRET_PATH  = "/backup/";
 var EFFECT_TIME = 1750;
 var EFFECT_TIME_EDITORS = 200;
-var DEFAULT_TIMER = 15*60*1000; //minutes*secs*milliseconds
-var DEFAULT_AUTO_SAVE_TIMER = 3*60*1000;
+var MINUTE = 60*1000;
+var DEFAULT_TIMER = 15*MINUTE; //minutes*secs*milliseconds
+var DEFAULT_AUTO_SAVE_TIMER = 3*MINUTE;
 var path_array = [];
 
 var TIMER = false;
 var AUTO_SAVE_TIMER = false;
-var TOKEN_EXPIRATION_TIMER = setInterval(show_token_expiration_warning, 60*1000);
+var TOKEN_EXPIRATION_TIMER = setInterval(show_token_expiration_warning, MINUTE);
 // end global variables
 
 function save_options(){
@@ -33,8 +34,8 @@ function save_options(){
         BACKUP_SECRET_PATH = $("#input_backup_path").val();
         localStorage.setItem("ironvault_backup_path", BACKUP_SECRET_PATH);
     }
-    localStorage.setItem("ironvault_logout_timer",$("#input_logout_timer").val()*60*1000);
-    localStorage.setItem("ironvault_autosave_timer",$("#input_autosave_timer").val()*60*1000);
+    localStorage.setItem("ironvault_logout_timer",$("#input_logout_timer").val()*MINUTE);
+    localStorage.setItem("ironvault_autosave_timer",$("#input_autosave_timer").val()*MINUTE);
     localStorage.setItem("ironvault_keep_editor_autosave",$("#check_keep_editor").is(":checked"));
     $("#options-modal").modal("hide");
 }
@@ -92,7 +93,7 @@ function login(method){
         $("#login_modal").modal("hide");
         reset_timer();
         window.clearInterval(TOKEN_EXPIRATION_TIMER);
-        TOKEN_EXPIRATION_TIMER = setInterval(show_token_expiration_warning, 60*1000);
+        TOKEN_EXPIRATION_TIMER = setInterval(show_token_expiration_warning, MINUTE);
         is_logged();
     }).fail(function(jqXHR, textStatus, errorThrown){
         if (jqXHR.readyState == 0){
@@ -118,7 +119,11 @@ function show_token_expiration_warning(){
         $("#token-timer").html(minutes + " mins");
         if (minutes < 5 && minutes > 1){
             $("#token_timer_minutes").html(minutes);
-            $("#token_expiration_warning_modal").modal("show");
+            if (($("#token_expiration_warning_modal").data('bs.modal') || {})._isShown){
+                $("#token_expiration_warning_modal").modal("hide");
+            } else {
+                $("#token_expiration_warning_modal").modal("show");
+            }
             $("#token-refresh-icon").show();
         } else if (minutes < 1){
             logout("Token has expired");
@@ -169,12 +174,20 @@ function logout(error){
     localStorage.removeItem('ironvault_token_expiration_time');
     window.clearInterval(TIMER);
     window.clearInterval(TOKEN_EXPIRATION_TIMER);
+    window.clearInterval(AUTO_SAVE_TIMER);
     $("#editormd").empty();
     $("#tree").empty();
+    // reset TIMERs
 }
 
 function automatic_logout(){
-    logout("Automatic logout");
+    path = get_path();
+    if (path.indexOf("&")>0){
+        data = $("#editormd textarea").val()
+        set_secret("automatic_logout",data,false,true,"");
+    } else {
+        logout("Automatic logout");
+    }
 }
 
 function reset_timer(){
@@ -479,6 +492,10 @@ function set_secret(action,data,create,backup,username){
         if (action == "unlocked"){
             get_secret();
         }
+        if (action == "automatic_logout"){
+            get_secret();
+            logout("Automatic logout");
+        }
         if (action == "auto-saved"){
             var params= path.split("&")
             path = params[0];
@@ -486,6 +503,7 @@ function set_secret(action,data,create,backup,username){
                 window.location.href = "#!"+path;
             }
         }
+        reset_timer();
     }).fail(function(jqXHR, textStatus, errorThrown){
         $("#log_error").html("Secret has NOT been "+action+"<br/><br/>ERROR: "+errorThrown);
         $("#log_error").slideDown().delay(EFFECT_TIME).slideUp();
