@@ -25,14 +25,23 @@
                 <input type="input" id="input_backup_path" class="form-control" placeholder="/backup/">
               </div>
           </div>
-          <div class="form-group">
-            <label for="input_logout_timer">Automatic logout after</label>
-            <select id="input_logout_timer" class="form-control">
-              <option value="15">15 minutes</option>
-              <option value="30">30 minutes</option>
-              <option value="45">45 minutes</option>
-              <option value="60">60 minutes</option>
-            </select>
+          <div class="form-row">
+              <div class="form-group col-md-6">
+                <label for="input_logout_timer">Automatic logout after</label>
+                <select id="input_logout_timer" class="form-control">
+                  <option value="15">15 minutes</option>
+                  <option value="30">30 minutes</option>
+                  <option value="45">45 minutes</option>
+                  <option value="60">60 minutes</option>
+                </select>
+              </div>
+              <div class="form-group col-md-6">
+                  <label for="input_theme">Theme</label>
+                  <select id="input_theme" class="form-control">
+                    <option value="default">Default</option>
+                    <option value="dark">Dark</option>
+                  </select>
+              </div>
           </div>
           <div class="form-row">
             <div class="form-group col-md-5">
@@ -66,6 +75,7 @@
         $("#input_vault_path").val(localStorage.getItem("ironvault_path") || DEFAULT_SECRET_PATH);
         $("#input_backup_path").val(localStorage.getItem("ironvault_backup_path") || BACKUP_SECRET_PATH);
         $("#input_logout_timer").val(localStorage.getItem("ironvault_logout_timer")/60/1000 || DEFAULT_TIMER/60/1000);
+        $("#input_theme").val(localStorage.getItem("ironvault_theme") || THEME);
         $("#input_autosave_timer").val(localStorage.getItem("ironvault_autosave_timer")/60/1000 || DEFAULT_AUTO_SAVE_TIMER/60/1000);
         $("#check_keep_editor").prop('checked', (localStorage.getItem("ironvault_keep_editor_autosave") == "true"));
     });

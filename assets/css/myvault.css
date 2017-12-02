@@ -118,3 +118,13 @@ a#token-renewer:hover, a#preferences-gear-icon:hover {
 ul#search_results {
     list-style-type: none;
 }
+
+.dark, html.dark .editormd-html-preview, .dark #search_results a {
+    background-color: #2e2d30;
+    color: white;
+    border-color: white;
+}
+
+.editormd-preview-theme-dark {
+    color:white;
+}

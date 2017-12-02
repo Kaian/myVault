@@ -3,6 +3,7 @@
 var VAULT_URL = "http://127.0.0.1:8200/v1/";
 var DEFAULT_SECRET_PATH = "/secret/";
 var BACKUP_SECRET_PATH  = "/backup/";
+var THEME = "default";
 var EFFECT_TIME = 1750;
 var EFFECT_TIME_EDITORS = 200;
 var MINUTE = 60*1000;
@@ -34,6 +35,9 @@ function save_options(){
         BACKUP_SECRET_PATH = $("#input_backup_path").val();
         localStorage.setItem("ironvault_backup_path", BACKUP_SECRET_PATH);
     }
+    localStorage.setItem("ironvault_theme",$("#input_theme").val());
+    THEME = $("#input_theme").val();
+    set_theme(THEME);
     localStorage.setItem("ironvault_logout_timer",$("#input_logout_timer").val()*MINUTE);
     localStorage.setItem("ironvault_autosave_timer",$("#input_autosave_timer").val()*MINUTE);
     localStorage.setItem("ironvault_keep_editor_autosave",$("#check_keep_editor").is(":checked"));
@@ -116,6 +120,16 @@ function get_token(){
     // }
 }
 
+function set_theme(mode){
+    if (mode == "dark"){
+        $("html").addClass("dark");
+        $("#todo").addClass("dark");
+    } else {
+        $("html").removeClass("dark");
+        $("#todo").removeClass("dark");
+    }
+}
+
 function show_token_expiration_warning(){
     var now = Math.floor(new Date().getTime()/1000);
     var expiration = localStorage.getItem("ironvault_token_expiration_time");
@@ -183,6 +197,7 @@ function logout(error){
     //clean inputs
     $("#username, #password, #token").val("");
     $("#login_error").html(error).slideDown().delay(EFFECT_TIME).slideUp();
+    set_theme("default");
 }
 
 function automatic_logout(){
@@ -221,6 +236,8 @@ function is_logged(){
         VAULT_URL = localStorage.getItem("ironvault_url") || VAULT_URL;
         DEFAULT_SECRET_PATH = localStorage.getItem("ironvault_path") || DEFAULT_SECRET_PATH;
         BACKUP_SECRET_PATH  = localStorage.getItem("ironvault_backup_path") || BACKUP_SECRET_PATH;
+        THEME  = localStorage.getItem("ironvault_theme") || THEME;
+        set_theme(THEME);
         var path = get_path();
         reset_timer();
         get_secret();
@@ -610,13 +627,26 @@ function get_secret(){
                         mode               : "gfm", // https://codemirror.net/mode/gfm/
                         tocm               : true,
                         tocTitle           : "TOCM",
-                        htmlDecode         : "style,script,iframe",
+                        htmlDecode         : "script,iframe",
                         emoji              : true,
                         taskList           : true,
                         tex                : true,
                         flowChart          : true,
                         sequenceDiagram    : true,
                     };
+                    if (THEME == "dark"){
+                        $.extend(editor_options,{
+                            theme              : "dark",
+                            previewTheme       : "dark",
+                            editorTheme        : "pastel-on-dark",
+                        });
+                    } else {
+                        $.extend(editor_options,{
+                            theme              : "default",
+                            previewTheme       : "default",
+                            editorTheme        : "default",
+                        });
+                    }
                     if (edit) {
                         var editormarkdown = "";
                         $("#functions_buttons").hide();
@@ -626,10 +656,10 @@ function get_secret(){
                             width              : "100%",
                             path               : "deps/editor.md/lib/",
                             codeFold           : true,
-                            // saveHTMLToTextarea : true,
+                            saveHTMLToTextarea : true,
                             searchReplace      : true,
                             autoCloseTags      : true,
-                            toolbarAutoFixed   : false,
+                            toolbarAutoFixed   : true,
                             toolbarIcons : function(){
                                 return ["undo", "redo", "|",
                                     "bold", "del", "italic", "quote", "|",
