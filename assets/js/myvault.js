@@ -674,7 +674,7 @@ function get_secret(){
                                 var keyMap = {
                                     "Ctrl-S": function(cm) {
                                         set_secret("updated",editormarkdown.getMarkdown(),false,true,localStorage.getItem("ironvault_username"));
-                                        reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,false,"");
+                                        reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,false,localStorage.getItem("ironvault_username"));
                                     },
                                     "Ctrl-Q": function(cm) {
                                         var path = get_path();
@@ -687,7 +687,7 @@ function get_secret(){
                                 this.addKeyMap(keyMap);
 
                                 set_secret("locked",editormarkdown.getMarkdown(),false,false,localStorage.getItem("ironvault_username"));
-                                reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,false,"");
+                                reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,false,localStorage.getItem("ironvault_username"));
                                 // Awesome hack to add "save" and close buttons :D
                                 $("ul.editormd-menu")
                                     .prepend(
@@ -704,7 +704,7 @@ function get_secret(){
                                 });
                                 $("#editor_update_secret_btn").click(function(){
                                     set_secret("updated",editormarkdown.getMarkdown(),false,true,localStorage.getItem("ironvault_username"));
-                                    reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,false,"");
+                                    reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,false,localStorage.getItem("ironvault_username"));
                                 });
 
                                 $('.markdown-toc a').click(function(e) {
@@ -717,7 +717,7 @@ function get_secret(){
                                 });
                             },
                             onchange : function() {
-                                reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,true,"");
+                                reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,true,localStorage.getItem("ironvault_username"));
                             },
                         });
                         editormarkdown = editormd("editormd", editor_options);
