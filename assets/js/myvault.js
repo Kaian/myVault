@@ -1,47 +1,49 @@
-// global variables
-// TODO: this should be made in better way :-)
-var VAULT_URL = "http://127.0.0.1:8200/v1/";
-var DEFAULT_SECRET_PATH = "/secret/";
-var BACKUP_SECRET_PATH  = "/backup/";
-var THEME = "default";
 var EFFECT_TIME = 1750;
 var EFFECT_TIME_EDITORS = 200;
-var MINUTE = 60*1000;
-var DEFAULT_TIMER = 15*MINUTE; //minutes*secs*milliseconds
-var DEFAULT_AUTO_SAVE_TIMER = 3*MINUTE;
+var MINUTE = 60 * 1000;
 var path_array = [];
 
-var TIMER = false;
-var AUTO_SAVE_TIMER = false;
-var TOKEN_EXPIRATION_TIMER = setInterval(show_token_expiration_warning, MINUTE);
-// end global variables
+var preferences = {
+    vault_url   : "http://127.0.0.1:8200/v1/",
+    secret_path : "/secret/",
+    backup_path : "/backup/",
+    theme       : "default",
+    keep_editor : true,
+    timers      : {
+        logout           : 15,
+        token_expiration : 0,
+        auto_save        : 3
+    },
+    username    : ""
+};
+var timers = {
+    logout           : false,
+    token_expiration : setInterval(show_token_expiration_warning, MINUTE),
+    auto_save        : false
+};
 
 function save_options(){
-    if ($("#input_vault_url_preferences").val() != ""){
-        // for preferences tab
-        VAULT_URL = $("#input_vault_url_preferences").val();
-        localStorage.setItem("ironvault_url", VAULT_URL);
-    }
-
-    if ($("#input_vault_url").val() != ""){
-        VAULT_URL = $("#input_vault_url").val();
-        localStorage.setItem("ironvault_url", VAULT_URL);
-    }
-    if ($("#input_vault_path").val() != ""){
-        DEFAULT_SECRET_PATH = $("#input_vault_path").val();
-        localStorage.setItem("ironvault_path", DEFAULT_SECRET_PATH);
-    }
-    if ($("#input_vault_path").val() != ""){
-        BACKUP_SECRET_PATH = $("#input_backup_path").val();
-        localStorage.setItem("ironvault_backup_path", BACKUP_SECRET_PATH);
-    }
-    localStorage.setItem("ironvault_theme",$("#input_theme").val());
-    THEME = $("#input_theme").val();
-    set_theme(THEME);
-    localStorage.setItem("ironvault_logout_timer",$("#input_logout_timer").val()*MINUTE);
-    localStorage.setItem("ironvault_autosave_timer",$("#input_autosave_timer").val()*MINUTE);
-    localStorage.setItem("ironvault_keep_editor_autosave",$("#check_keep_editor").is(":checked"));
+    var options = {
+        vault_url   : $("#input_vault_url").val() || preferences.vault_url,
+        secret_path : $("#input_vault_path").val() || preferences.secret_path,
+        backup_path : $("#input_backup_path").val() || preferences.backup_path,
+        theme       : $("#input_theme").val(),
+        keep_editor : $("#check_keep_editor").is(":checked"),
+        timers      : {
+            logout           : $("#input_logout_timer").val(),
+            auto_save        : $("#input_autosave_timer").val()
+        }
+    };
+    $.extend(preferences,options);
+    preferences.vault_url = $("#input_vault_url_preferences").val();
+    set_theme(preferences.theme);
+    localStorage.setItem("myvault_preferences", JSON.stringify(preferences));
     $("#options-modal").modal("hide");
+}
+
+function get_saved_options() {
+    var options = JSON.parse(localStorage.getItem("myvault_preferences"));
+    $.extend(preferences,options);
 }
 
 function login(method){
@@ -64,21 +66,20 @@ function login(method){
         var policies = [];
         var expiration_time = 0;
         if (method == "ldap"){
-            localStorage.setItem("ironvault_token", res.auth.client_token);
-            localStorage.setItem("ironvault_accessor", res.auth.accessor);
-            localStorage.setItem("ironvault_username", res.auth.metadata.username);
+            localStorage.setItem("myvault_token", res.auth.client_token);
+            preferences.username = res.auth.metadata.username;
             policies = res.auth.policies.sort();
             expiration_time = Math.floor(new Date().getTime()/1000) + res.auth.lease_duration;
         } else if (method == "token"){
-            localStorage.setItem("ironvault_token", res.data.id);
-            localStorage.setItem("ironvault_username", res.data.display_name);
+            localStorage.setItem("myvault_token", res.data.id);
+            preferences.username = res.data.display_name;
             policies = res.data.policies.sort();
             // expir_time is null when root token
-            if (res.data.expire_time != null){
+            if (res.data.expire_time !== null){
                 expiration_time = res.data.creation_time + res.data.creation_ttl;
             }
         }
-        localStorage.setItem("ironvault_token_expiration_time",expiration_time);
+        localStorage.setItem("myvault_token_expiration_time",expiration_time);
         if (expiration_time > 0){
             var now = Math.floor(new Date().getTime()/1000);
             var minutes = Math.floor((expiration_time-now)/60);
@@ -87,20 +88,19 @@ function login(method){
         $.each(policies,function(index,value){
             if (value.substring(0,9) == "clientes_"){
                 var regexp = /^clientes_/;
-                var value = value.replace(regexp,"");
-                DEFAULT_SECRET_PATH = "/secret/clientes/"+value+"/";
-                localStorage.setItem("ironvault_path", DEFAULT_SECRET_PATH);
-                BACKUP_SECRET_PATH  = "/backup"+DEFAULT_SECRET_PATH;
-                localStorage.setItem("ironvault_backup_path", BACKUP_SECRET_PATH);
+                value = value.replace(regexp,"");
+                preferences.secret_path = "/secret/clientes/"+value+"/";
+                preferences.backup_path = "/backup"+preferences.secret_path;
             }
         });
         $("#login_modal").modal("hide");
         reset_timer();
-        window.clearInterval(TOKEN_EXPIRATION_TIMER);
-        TOKEN_EXPIRATION_TIMER = setInterval(show_token_expiration_warning, MINUTE);
+        window.clearInterval(timers.token_expiration);
+        timers.token_expiration = setInterval(show_token_expiration_warning, MINUTE);
+        save_options();
         is_logged();
     }).fail(function(jqXHR, textStatus, errorThrown){
-        if (jqXHR.readyState == 0){
+        if (jqXHR.readyState === 0){
             logout("There's a network error");
             $("#log_error").slideDown().delay(EFFECT_TIME).slideUp();
         }
@@ -112,12 +112,8 @@ function login(method){
 }
 
 function get_token(){
-    var token = localStorage.getItem("ironvault_token");
-    // if (token == null){
-    //     logout("There's no valid token");
-    // } else {
-        return token;
-    // }
+    var token = localStorage.getItem("myvault_token");
+    return token;
 }
 
 function set_theme(mode){
@@ -132,13 +128,13 @@ function set_theme(mode){
 
 function show_token_expiration_warning(){
     var now = Math.floor(new Date().getTime()/1000);
-    var expiration = localStorage.getItem("ironvault_token_expiration_time");
+    var expiration = localStorage.getItem("myvault_token_expiration_time");
     if (expiration > 0){
         minutes = Math.floor((expiration-now)/60);
         $("#token-timer").html(minutes + " mins");
         if (minutes < 5 && minutes > 1){
             $("#token_timer_minutes").html(minutes);
-            if (($("#token_expiration_warning_modal").data('bs.modal') || {})._isShown){
+            if (($("#token_expiration_warning_modal").data("bs.modal") || {})._isShown){
                 $("#token_expiration_warning_modal").modal("hide");
             } else {
                 $("#token_expiration_warning_modal").modal("show");
@@ -155,8 +151,8 @@ function renew_token(){
     data = {increment: "2h"};
     make_action("POST","/auth/token/renew-self",data).done(function(response, textStatus, jqXHR){
         var now = Math.floor(new Date().getTime()/1000);
-        var expiration = parseInt(localStorage.getItem("ironvault_token_expiration_time"))+7200;
-        localStorage.setItem("ironvault_token_expiration_time",expiration);
+        var expiration = parseInt(localStorage.getItem("myvault_token_expiration_time"))+7200;
+        localStorage.setItem("myvault_token_expiration_time",expiration);
         $("#token-refresh-icon").hide();
         minutes = Math.floor((expiration-now)/60);
         $("#token-timer").html(minutes + " mins");
@@ -167,11 +163,11 @@ function renew_token(){
 function get_path(in_editor=false){
     var hash = window.location.hash.substring(2);
     if (hash.length == 0){
-        hash =  DEFAULT_SECRET_PATH;
+        hash =  preferences.secret_path;
     }
     if (in_editor){
         if (hash.indexOf("&")>0){
-            var params= hash.split("&")
+            var params= hash.split("&");
             hash = params[0];
         }
     }
@@ -179,18 +175,16 @@ function get_path(in_editor=false){
 }
 
 function logout(error){
-    if (localStorage.getItem("ironvault_token")){
+    if (localStorage.getItem("myvault_token")){
         //revoke token
         make_action("POST","/auth/token/revoke-self").done(function(response, textStatus, jqXHR){
-            localStorage.removeItem('ironvault_token');
+            localStorage.removeItem("myvault_token");
         });
     }
-    localStorage.removeItem('ironvault_path');
-    localStorage.removeItem('ironvault_backup_path');
-    localStorage.removeItem('ironvault_token_expiration_time');
-    window.clearInterval(TIMER);
-    window.clearInterval(TOKEN_EXPIRATION_TIMER);
-    window.clearInterval(AUTO_SAVE_TIMER);
+    localStorage.removeItem("myvault_token_expiration_time");
+    window.clearInterval(timers.logout);
+    window.clearInterval(timers.token_expiration);
+    window.clearInterval(timers.auto_save);
     $("#editormd").empty();
     $("#tree").empty();
     $("#login_modal").modal("show");
@@ -203,7 +197,7 @@ function logout(error){
 function automatic_logout(){
     path = get_path();
     if (path.indexOf("&")>0){
-        data = $("#editormd textarea").val()
+        data = $("#editormd textarea").val();
         set_secret("automatic_logout",data,false,true,"");
     } else {
         logout("Automatic logout");
@@ -211,38 +205,36 @@ function automatic_logout(){
 }
 
 function reset_timer(){
-    window.clearInterval(TIMER);
-    TIMER = setInterval(automatic_logout, localStorage.getItem("ironvault_logout_timer") || DEFAULT_TIMER);
+    window.clearInterval(timers.logout);
+    timers.logout = setInterval(automatic_logout, preferences.timers.logout*MINUTE);
 }
 
 function reset_auto_save_timer(active_timer,action="",data="",create="",backup="",username=""){
-    window.clearInterval(AUTO_SAVE_TIMER);
-    AUTO_SAVE_TIMER = false;
+    window.clearInterval(timers.auto_save);
+    timers.auto_save = false;
     if (active_timer){
         //set_secret(action,data,create,backup,username)
-        AUTO_SAVE_TIMER = setInterval(set_secret.bind(null,action,data,create,backup,username), localStorage.getItem("ironvault_autosave_timer") || DEFAULT_AUTO_SAVE_TIMER);
+        timers.auto_save = setInterval(set_secret.bind(null,action,data,create,backup,username), preferences.timers.auto_save*MINUTE);
     }
 }
 
 function is_logged(){
     if(window.location.search.substring(1) == "logout"){
         // we force logout if there's in the URL
-        localStorage.removeItem("ironvault_token");
+        localStorage.removeItem("myvault_token");
     }
+    get_saved_options();
     var token = get_token();
     if (!token){
         $("#login_modal").modal("show");
     } else {
-        VAULT_URL = localStorage.getItem("ironvault_url") || VAULT_URL;
-        DEFAULT_SECRET_PATH = localStorage.getItem("ironvault_path") || DEFAULT_SECRET_PATH;
-        BACKUP_SECRET_PATH  = localStorage.getItem("ironvault_backup_path") || BACKUP_SECRET_PATH;
-        THEME  = localStorage.getItem("ironvault_theme") || THEME;
-        set_theme(THEME);
+        set_theme(preferences.theme);
         var path = get_path();
         reset_timer();
         get_secret();
-        update_secret_tree()
+        update_secret_tree();
     }
+    $("#input_vault_url_preferences").val(preferences.vault_url);
 }
 
 function capabilities_allow(capabilities,policy){
@@ -257,10 +249,10 @@ function capabilities_allow(capabilities,policy){
 
 function get_capabilities(path){
     var token = get_token();
-    if (token == null){
+    if (token === null){
         logout("There's no valid token");
     } else {
-        data = {path: path.substring(1)}
+        data = {path: path.substring(1)};
         var promise = new Promise((resolve, reject) => {
             make_action("POST","/sys/capabilities-self",data).done(function(response, textStatus, jqXHR){
                 resolve(jqXHR.responseJSON.capabilities);
@@ -277,8 +269,8 @@ function get_tree(path) {
 
     var promise = new Promise((resolve, reject) => {
         make_action("LIST",path).done(function (response) {
-            var promises = []
-            var items = []
+            var promises = [];
+            var items = [];
 
             $.each(response.data.keys.sort(), (index, value) => {
                 var link_path = path + value;
@@ -290,14 +282,14 @@ function get_tree(path) {
                 };
 
                 if (current_path.substring(0,link_path.length) == link_path){
-                    item["state"] = {
+                    item.state = {
                         expanded: true
-                    }
+                    };
                     if (current_path == link_path){
-                        item["state"] = {
+                        item.state = {
                             expanded: true,
                             selected: true
-                        }
+                        };
                     }
                 }
 
@@ -311,9 +303,9 @@ function get_tree(path) {
             Promise.all(promises).then(data => {
                 $.each(data, (index, value) => {
                    var x = items.map(function(e){
-                       return e['href'];
-                   }).indexOf(value[0]['path'])
-                   items[x]['nodes'] = value;
+                       return e.href;
+                   }).indexOf(value[0].path);
+                   items[x].nodes = value;
                 });
                 resolve(items);
             });
@@ -323,9 +315,10 @@ function get_tree(path) {
     return promise;
 }
 
-function update_secret_tree(){
-    get_tree(DEFAULT_SECRET_PATH).then(function (data) {
-        var keys_tree = $("#tree").treeview({
+function update_secret_tree(path="",admin=false){
+    path = path || preferences.secret_path;
+    get_tree(path).then(function (data) {
+        var tree_options = {
             data:data,
             levels:1,
             color: "#2e2d30",
@@ -334,25 +327,34 @@ function update_secret_tree(){
             expandIcon: "fa fa-plus",
             collapseIcon: "fa fa-minus",
             onNodeSelected: function(event, node) {
-                var node = $('#tree').treeview("getSelected")[0];
+                node = $("#tree").treeview("getSelected")[0];
                 window.location.href = node.href;
-                $('#tree').treeview('clearSearch');
+                $("#tree").treeview("clearSearch");
                 var parents = [];
-                var n = $('#tree').treeview('getParent', node);
+                var n = $("#tree").treeview("getParent", node);
                 parents.push(n.nodeId);
                 while (parents[parents.length-1] != undefined){
-                    var n = $('#tree').treeview('getParent', n.nodeId);
+                    n = $("#tree").treeview("getParent", n.nodeId);
                     parents.push(n.nodeId);
                 }
-                $('#tree').treeview('collapseAll', { silent: true });
+                $("#tree").treeview("collapseAll", { silent: true });
                 $.each(parents.reverse(), function (index, parent) {
                     if (parent != undefined){
-                        $('#tree').treeview('expandNode', [ parent, { levels: 1, silent: true } ]);
+                        $("#tree").treeview("expandNode", [ parent, { levels: 1, silent: true } ]);
                     }
                 });
-                $('#tree').treeview('expandNode', node.nodeId);
+                $("#tree").treeview("expandNode", node.nodeId);
             }
-        });
+        };
+        if (admin){
+            var admin_options = {
+                showCheckbox : true,
+                checkedIcon: "fa fa-check-square-o",
+                uncheckedIcon: "fa fa-square-o"
+            };
+            $.extend(tree_options,admin_options);
+        }
+        var keys_tree = $("#tree").treeview(tree_options);
         // search tree
         var findExpandibleNodess = function() {
             return keys_tree.treeview("search", [ $("#input_search_tree").val(), { ignoreCase: true, exactMatch: false } ]);
@@ -360,7 +362,7 @@ function update_secret_tree(){
         var expandibleNodes = findExpandibleNodess();
         var search = function(e) {
             var pattern = $("#input_search_tree").val();
-            var results = keys_tree.treeview('search', [ pattern, { ignoreCase: true, exactMatch: false } ]);
+            var results = keys_tree.treeview("search", [ pattern, { ignoreCase: true, exactMatch: false } ]);
             var output = '<p>' + results.length + ' matches found</p><ul id="search_results">';
             $.each(results, function (index, result) {
                 var href = result.href.replace("#!","");
@@ -369,7 +371,7 @@ function update_secret_tree(){
             output += "</li>";
             $("#search_results").html(output);
             $("#search_results").show();
-        }
+        };
         // Expand/collapse/toggle nodes
         $('#input_search_tree').on('keyup', function (e) {
             expandibleNodes = findExpandibleNodess();
@@ -380,7 +382,7 @@ function update_secret_tree(){
 }
 
 function update_breadcrumb() {
-    path = get_path(true) || DEFAULT_SECRET_PATH;
+    path = get_path(true) || preferences.secret_path;
     $("#create_secret_path").html(path);
     var path = path.substring(1);
     var complete_path="#!";
@@ -403,14 +405,14 @@ function update_breadcrumb() {
 }
 
 function print_secret(data){
-    var mywindow = window.open('', 'new div', 'height=400,width=600');
-    mywindow.document.write('<html><head><title></title>');
+    var mywindow = window.open("", "new div", "height=400,width=600");
+    mywindow.document.write("<html><head><title></title>");
     mywindow.document.write('<link rel="stylesheet" href="deps/editor.md/css/editormd.min.css">');
-    mywindow.document.write('</head><body>');
+    mywindow.document.write("</head><body>");
     mywindow.document.write('<div class="markdown-body editormd-html-preview">');
     mywindow.document.write(data);
-    mywindow.document.write('</div>');
-    mywindow.document.write('</body></html>');
+    mywindow.document.write("</div>");
+    mywindow.document.write("</body></html>");
     setTimeout(function(){
         //FIXME: if not delayed, the document is not loaded
         mywindow.print();
@@ -419,7 +421,6 @@ function print_secret(data){
 }
 
 function make_action(action,path,data="",headers=""){
-    VAULT_URL = localStorage.getItem("ironvault_url") || VAULT_URL;
     var token = get_token();
     if (headers == ""){
         headers = {"X-Vault-Token": token};
@@ -427,11 +428,11 @@ function make_action(action,path,data="",headers=""){
     var options = {
         type: action,
         headers: headers,
-        url: VAULT_URL+path.substring(1),
+        url: preferences.vault_url+path.substring(1),
         timeout: 5000,
         dataType: "json",
         contentType: "application/json"
-    }
+    };
     var data_object = {};
     if (data != ""){
         data_object = {data: JSON.stringify(data)};
@@ -440,16 +441,17 @@ function make_action(action,path,data="",headers=""){
     return $.ajax(options);
 }
 
-function set_vault_secret(path,data,backup=true,username=""){
+function set_vault_secret(path,data,backup=true,locked_by="",action=""){
     var json_item = {};
-    json_item["ironvault"] = "markdown";
-    json_item["data"] = data;
-    if (username != ""){
-        json_item["username"] = username;
-    }
+    json_item.data = data;
+    json_item.date = (new Date ()).getTime();
+    json_item.action = action;
+    json_item.by = preferences.username;
+    json_item.data = data;
+    json_item.locked_by = locked_by;
 
     if (backup){
-        backup_secret(path);
+        backup_secret(path,locked_by,action);
     }
     return make_action("PUT",path,json_item);
 }
@@ -462,7 +464,7 @@ function move_secret(path,new_path){
                 if (capabilities_allow(capabilities_new_path,"create") || capabilities_allow(capabilities_new_path,"update")) {
                     //now we can move the secret
                     make_action("GET",path).done(function(response, textStatus, jqXHR){
-                        set_vault_secret(new_path,response.data["data"]).done(function(response, textStatus, jqXHR){
+                        set_vault_secret(new_path,response.data.data,true,"","moved from "+path).done(function(response, textStatus, jqXHR){
                             $("#move_modal").modal("hide");
                             $("#log_success").html("Secret has been moved to "+new_path).slideDown().delay(EFFECT_TIME).slideUp();
                             make_action("DELETE",path).done(function(){
@@ -484,20 +486,20 @@ function move_secret(path,new_path){
 function unlock_secret(){
     path = get_path();
     make_action("GET",path).done(function(response, textStatus, jqXHR){
-        set_secret("unlocked",response.data["data"],false,false,"");
+        set_secret("unlocked",response.data.data,false,true,"");
     });
 }
 
-function backup_secret(path){
-    var date = (new Date).getTime();
+function backup_secret(path,locked_by,action){
+    var date = (new Date ()).getTime();
     make_action("GET",path).done(function(response, textStatus, jqXHR){
-        set_vault_secret(BACKUP_SECRET_PATH+path.substring(1)+"__"+date,response.data["data"],false);
+        set_vault_secret(preferences.backup_path+path.substring(1)+"__"+date,response.data.data,false,response.data.locked_by,response.data.action);
     });
 }
 
 function delete_secret(path){
     make_action("DELETE",path).done(function(response, textStatus, jqXHR){
-        window.location.href = "#!"+DEFAULT_SECRET_PATH;
+        window.location.href = "#!"+preferences.secret_path;
         $("#log_error").html("Secret has been deleted").slideDown().delay(EFFECT_TIME).slideUp();
         $("#editors").hide();
         $("#create_secret").show();
@@ -505,7 +507,7 @@ function delete_secret(path){
     update_secret_tree();
 }
 
-function set_secret(action,data,create,backup,username){
+function set_secret(action,data,create,backup,locked_by){
     var token = get_token();
     var path = "";
 
@@ -514,26 +516,28 @@ function set_secret(action,data,create,backup,username){
     } else {
         path = get_path(true);
     }
+    if (action == "auto-saved") {
+        if (preferences.keep_editor != true) {
+            locked_by = "";
+            action = "auto-saved-closed";
+        }
+    }
 
-    set_vault_secret(path,data,backup,username).done(function(response, textStatus, jqXHR){
+    set_vault_secret(path,data,backup,locked_by,action).done(function(response, textStatus, jqXHR){
         $("#log_success").html("Secret has been "+action).slideDown().delay(EFFECT_TIME).slideUp();
         if (create){
             window.location.href = "#!"+path+"&edit=1";
             update_secret_tree();
         }
-        if (action == "unlocked"){
+        if (action == "unlocked" || action == "closed"){
             get_secret();
         }
         if (action == "automatic_logout"){
             get_secret();
             logout("Automatic logout");
         }
-        if (action == "auto-saved"){
-            var params= path.split("&")
-            path = params[0];
-            if (localStorage.getItem("ironvault_keep_editor_autosave") != "true") {
-                window.location.href = "#!"+path;
-            }
+        if (action == "auto-saved-closed") {
+            window.location.href = "#!"+get_path(1);
         }
         reset_timer();
     }).fail(function(jqXHR, textStatus, errorThrown){
@@ -550,7 +554,7 @@ function get_secret(){
     $("#create_secret").hide();
     $("#log_info").hide();
     if (path.indexOf("&")>0){
-        var params= path.split("&")
+        var params= path.split("&");
         path = params[0];
         if (params[1].split("=")[0] == "edit"){
             edit = true;
@@ -592,16 +596,15 @@ function get_secret(){
 
                 make_action("GET",path).done(function(response, textStatus, jqXHR){
                     $("#editors").slideDown(EFFECT_TIME_EDITORS);
-                    $("#editormd textarea").text(response.data["data"]);
+                    $("#editormd textarea").text(response.data.data);
                     $("#search_results").hide();
 
-                    if (response.data["username"]){
+                    if (response.data.locked_by){
                         if (edit_url){
-                            console.log(edit_url);
                             window.location.href = "#!"+path;
                         }
                         edit = false;
-                        $("#log_info").html("Secret is locked by <b>'" + response.data["username"] + "'</b>").slideDown();
+                        $("#log_info").html("Secret is locked by <b>'" + response.data.locked_by + "'</b>").slideDown();
                         if (capabilities_allow(capabilities,"create") || capabilities_allow(capabilities,"update")) {
                             $("#unlock_secret_btn").show();
                         }
@@ -633,7 +636,7 @@ function get_secret(){
                         flowChart          : true,
                         sequenceDiagram    : true,
                     };
-                    if (THEME == "dark"){
+                    if (preferences.theme == "dark"){
                         $.extend(editor_options,{
                             theme              : "dark",
                             previewTheme       : "dark",
@@ -647,7 +650,6 @@ function get_secret(){
                         });
                     }
                     if (edit) {
-                        var editormarkdown = "";
                         $("#functions_buttons").hide();
 
                         // extending editor.md
@@ -668,26 +670,26 @@ function get_secret(){
                                     "code-block",
                                     "table", "emoji", "pagebreak", "|",
                                     "watch", "preview", "search", "fullscreen"
-                                ]
+                                ];
                             },
                             onload : function() {
                                 var keyMap = {
                                     "Ctrl-S": function(cm) {
-                                        set_secret("updated",editormarkdown.getMarkdown(),false,true,localStorage.getItem("ironvault_username"));
-                                        reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,false,localStorage.getItem("ironvault_username"));
+                                        set_secret("updated",editormarkdown.getMarkdown(),false,true,preferences.username);
+                                        reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,true,preferences.username);
                                     },
                                     "Ctrl-Q": function(cm) {
                                         var path = get_path();
                                         path = path.replace('&edit=1', '');
-                                        set_secret("unlocked",editormarkdown.getMarkdown(),false,false,"");
+                                        set_secret("closed",editormarkdown.getMarkdown(),false,true,"");
                                         window.location.href = "#!"+path;
                                         update_secret_tree();
                                     }
                                 };
                                 this.addKeyMap(keyMap);
 
-                                set_secret("locked",editormarkdown.getMarkdown(),false,false,localStorage.getItem("ironvault_username"));
-                                reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,false,localStorage.getItem("ironvault_username"));
+                                set_secret("locked",editormarkdown.getMarkdown(),false,true,preferences.username);
+                                reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,true,preferences.username);
                                 // Awesome hack to add "save" and close buttons :D
                                 $("ul.editormd-menu")
                                     .prepend(
@@ -698,13 +700,13 @@ function get_secret(){
                                 $("#close_secret_btn").click(function(){
                                     var path = get_path();
                                     path = path.replace('&edit=1', '');
-                                    set_secret("unlocked",editormarkdown.getMarkdown(),false,false,"");
+                                    set_secret("closed",editormarkdown.getMarkdown(),false,true,"");
                                     update_secret_tree();
                                     window.location.href = "#!"+path;
                                 });
                                 $("#editor_update_secret_btn").click(function(){
-                                    set_secret("updated",editormarkdown.getMarkdown(),false,true,localStorage.getItem("ironvault_username"));
-                                    reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,false,localStorage.getItem("ironvault_username"));
+                                    set_secret("updated",editormarkdown.getMarkdown(),false,true,preferences.username);
+                                    reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,true,preferences.username);
                                 });
 
                                 $('.markdown-toc a').click(function(e) {
@@ -717,7 +719,7 @@ function get_secret(){
                                 });
                             },
                             onchange : function() {
-                                reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,true,localStorage.getItem("ironvault_username"));
+                                reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,true,preferences.username);
                             },
                         });
                         editormarkdown = editormd("editormd", editor_options);
@@ -753,23 +755,23 @@ function browse_secret_backups(){
     var secret = path.replace(orig_path,"");
     var backups = [];
 
-    make_action("LIST",BACKUP_SECRET_PATH+orig_path.substring(1)).done(function(response, textStatus, jqXHR){
+    make_action("LIST",preferences.backup_path+orig_path.substring(1)).done(function(response, textStatus, jqXHR){
         // empty the backups table
         $("#backups_table_body").empty();
 
         $.each(response.data.keys.sort(), (index, value) => {
             if (value.startsWith(secret+"__")){
                 var item = {};
-                item["href"] = "#!"+BACKUP_SECRET_PATH+orig_path.substring(1)+value;
-                var re = new RegExp(secret+"\_\_\(\\d+\)")
+                item.href = "#!"+preferences.backup_path+orig_path.substring(1)+value;
+                var re = new RegExp(secret+"\_\_\(\\d+\)");
                 var date = re.exec(value);
                 var d = new Date(parseInt(date[1]));
-                item["date"] = d.toISOString();
+                item.date = d.toISOString();
                 backups.push(item);
             }
         });
         $.each(backups.reverse(), (index, value) => {
-            var tr = "<tr><td>"+value["date"]+'</td><td><a href="'+value["href"]+'" target="_blank">Show</a>'+"</td></tr>"
+            var tr = "<tr><td>"+value.date+'</td><td><a href="'+value.href+'" target="_blank">Show</a>'+"</td></tr>";
             $("#backups_table_body").append(tr);
         });
         $("#backups_modal").modal("show");
@@ -779,7 +781,7 @@ function browse_secret_backups(){
 }
 
 function hash_changed(event){
-    if (AUTO_SAVE_TIMER == false){
+    if (timers.auto_save == false){
         reset_auto_save_timer(false);
         get_secret();
         reset_timer();
@@ -798,36 +800,3 @@ function hash_changed(event){
         }
     }
 }
-
-$(document).ready(function(){
-    $("#logout").click(function(){
-        logout("You have been logout");
-    });
-
-    $("#create_secret_btn").click(function(){
-        set_secret("created","",true,false,"");
-    });
-
-    $("#edit_secret_btn").click(function(){
-        var path = get_path();
-        window.location.href = "#!"+path+"&edit=1";
-        update_secret_tree();
-    });
-
-    $("#backups_secret_btn").click(function(){
-        browse_secret_backups();
-    });
-
-    $("#unlock_secret_btn").click(function(){
-        unlock_secret();
-    });
-
-    $("#print_secret_btn").click(function(){
-        print_secret($("#editormd").html());
-    });
-
-    window.addEventListener("hashchange", hash_changed, false);
-
-    is_logged();
-
-});

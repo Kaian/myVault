@@ -23,7 +23,7 @@
     $("#confirm_delete_secret_btn").click(function(){
         delete_secret(get_path());
         $("#delete_modal").modal("hide");
-        window.location.href = "#!"+DEFAULT_SECRET_PATH;
+        window.location.href = "#!"+preferences.secret_path;
     });
     $("#cancel_btn").click(function(){
         $("#delete_modal").modal("hide");

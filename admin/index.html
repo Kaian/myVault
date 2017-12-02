@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <script src="../assets/js/jquery-3.2.1.min.js"></script>
+        <script src="../assets/js/popper.min.js"></script>
+
+        <link rel="stylesheet" href="../assets/css/bootstrap.min.css">
+        <script src="../assets/js/bootstrap.min.js"></script>
+
+        <script src="../assets/js/bootstrap-treeview.js"></script>
+        <link rel="stylesheet" href="../assets/css/bootstrap-treeview.css">
+
+        <script src="../assets/js/myvault.js"></script>
+        <link rel="stylesheet" href="../assets/css/myvault.css">
+
+        <link rel="stylesheet" href="../deps/editor.md/css/editormd.min.css">
+        <script src="./admin.js"></script>
+        <link rel="apple-touch-icon" href="../assets/img/favicon-180.png" sizes="180x180">
+        <link rel="icon" href="../assets/img/favicon.png" sizes="32x32" type="image/png">
+        <title>My Vault</title>
+    </head>
+
+    <body>
+        <nav class="navbar navbar-expand-md navbar-dark navbar-admin">
+            <a class="navbar-brand" href="../index.html">My Vault
+                <i id="lock-icon" class="fa fa-unlock-alt fa" aria-hidden="true"></i>
+            </a>
+
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#hiddenOptions" aria-controls="hiddenOptions" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="hiddenOptions">
+                <ul class="navbar-nav nav mr-auto" id="options-tab" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="logs-tab" data-toggle="pill" href="#status" role="tab" aria-controls="status" aria-selected="true">Status</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="logs-tab" data-toggle="pill" href="#logs" role="tab" aria-controls="logs" aria-selected="true">Logs</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="backups-tab" data-toggle="pill" href="#backups" role="tab" aria-controls="backups" aria-selected="false">Backups</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="policies-tab" data-toggle="pill" href="#policies" role="tab" aria-controls="policies" aria-selected="false">Policies</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="accessors-tab" data-toggle="pill" href="#accessors" role="tab" aria-controls="accessors" aria-selected="false">Accessors</a>
+                    </li>
+                </ul>
+
+                <ul class="navbar-nav">
+                    <li class="nav-item active">
+                        <a id="logout" class="nav-link" href="#!">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <div id="principal" class="container-fluid">
+            <div class="row">
+                <main class="col-md-12" role="main">
+                    <div id="log_error" class="alert alert-danger" role="alert" style="display:none"></div>
+                    <div id="log_success" class="alert alert-success" role="alert" style="display:none"></div>
+                    <div id="log_info" class="alert alert-dark" role="alert" style="display:none"></div>
+
+                    <div class="tab-content" id="options-tabContent">
+                        <div class="tab-pane fade show active" id="status" role="tabpanel" aria-labelledby="status-tab">
+                            Check Vault status and unseal options
+                        </div>
+                        <div class="tab-pane fade" id="logs" role="tabpanel" aria-labelledby="logs-tab">
+                            Logs
+                        </div>
+                        <div class="tab-pane fade" id="backups" role="tabpanel" aria-labelledby="backups-tab">
+                            <div class="row">
+                                <div id="secrets" class="col-md-6">
+                                    <div id="tree"></div>
+                                </div>
+                                <div id="backup-button" class="col-md-6">
+                                    <button id="delete_backups_btn" type="button" class="btn btn-outline-danger">Delete checked backups</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="policies" role="tabpanel" aria-labelledby="policies-tab">
+                            Policies
+                        </div>
+                        <div class="tab-pane fade" id="accessors" role="tabpanel" aria-labelledby="accessors-tab">
+                            Accessors
+                        </div>
+                    </div>
+                </main>
+            </div> <!-- .row -->
+        </div> <!-- #principal -->
+
+        <nav id="footer" class="navbar fixed-bottom navbar-expand navbar-dark  bg-dark ">
+            <a class="navbar-brand" href="http://github.com/yuki">Made by Yuki</a>
+        </nav>
+        <script type="text/javascript">
+            $(document).ready(function(){
+                get_saved_options();
+
+                $("a").on("shown.bs.tab", function (e) {
+                    if ($(e.target).text() == "Backups"){
+
+                        update_secret_tree(preferences.backup_path,true);
+                        $("#delete_backups_btn").click(function(){
+                            delete_secret_backups();
+                        });
+
+                    }
+                    // e.relatedTarget // previous active tab
+                })
+            });
+        </script>
+    </body>
+</html>

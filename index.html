@@ -23,12 +23,13 @@
     <script src="deps/editor.md/lib/flowchart.min.js"></script>
     <script src="deps/editor.md/lib/jquery.flowchart.min.js"></script>
 
-
     <script src="deps/editor.md/languages/en.js"></script>
     <link rel="stylesheet" href="deps/editor.md/css/editormd.min.css">
 
     <script src="assets/js/myvault.js"></script>
     <link rel="stylesheet" href="assets/css/myvault.css">
+    <link rel="apple-touch-icon" href="assets/img/favicon-180.png" sizes="180x180">
+    <link rel="icon" href="assets/img/favicon.png" sizes="32x32" type="image/png">
 
     <title>My Vault</title>
   </head>
@@ -211,7 +212,6 @@
 
 
     <script type="text/javascript">
-        $("#input_vault_url_preferences").val(localStorage.getItem("ironvault_url") || VAULT_URL);
         $("#modal").load("modal.html");
         $("#modal_move").load("move_modal.html");
         $("#modal_delete").load("delete_modal.html");
@@ -224,6 +224,39 @@
         });
         $("#save_preferences").click(function(){
             save_options();
+        });
+
+        $(document).ready(function(){
+           $("#logout").click(function(){
+                logout("You have been logout");
+            });
+
+            $("#create_secret_btn").click(function(){
+                set_secret("created","",true,true,"");
+            });
+
+            $("#edit_secret_btn").click(function(){
+                var path = get_path();
+                window.location.href = "#!"+path+"&edit=1";
+                update_secret_tree();
+            });
+
+            $("#backups_secret_btn").click(function(){
+                browse_secret_backups();
+            });
+
+            $("#unlock_secret_btn").click(function(){
+                unlock_secret();
+            });
+
+            $("#print_secret_btn").click(function(){
+                print_secret($("#editormd").html());
+            });
+
+            window.addEventListener("hashchange", hash_changed, false);
+
+            is_logged();
+
         });
     </script>
   </body>

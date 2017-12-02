@@ -128,3 +128,7 @@ ul#search_results {
 .editormd-preview-theme-dark {
     color:white;
 }
+
+.navbar-admin {
+    background-color: #b0232a!important;
+}

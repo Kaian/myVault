@@ -71,13 +71,13 @@
 <script type="text/javascript">
 
     $("#options-modal").on('show.bs.modal', function (e) {
-        $("#input_vault_url").val(localStorage.getItem("ironvault_url") || VAULT_URL);
-        $("#input_vault_path").val(localStorage.getItem("ironvault_path") || DEFAULT_SECRET_PATH);
-        $("#input_backup_path").val(localStorage.getItem("ironvault_backup_path") || BACKUP_SECRET_PATH);
-        $("#input_logout_timer").val(localStorage.getItem("ironvault_logout_timer")/60/1000 || DEFAULT_TIMER/60/1000);
-        $("#input_theme").val(localStorage.getItem("ironvault_theme") || THEME);
-        $("#input_autosave_timer").val(localStorage.getItem("ironvault_autosave_timer")/60/1000 || DEFAULT_AUTO_SAVE_TIMER/60/1000);
-        $("#check_keep_editor").prop('checked', (localStorage.getItem("ironvault_keep_editor_autosave") == "true"));
+        $("#input_vault_url").val(preferences.vault_url);
+        $("#input_vault_path").val(preferences.secret_path);
+        $("#input_backup_path").val(preferences.backup_path);
+        $("#input_logout_timer").val(preferences.timers.logout);
+        $("#input_theme").val(preferences.theme);
+        $("#input_autosave_timer").val(preferences.timers.auto_save);
+        $("#check_keep_editor").prop('checked', preferences.keep_editor);
     });
 
     $("#save_options").click(function(){
