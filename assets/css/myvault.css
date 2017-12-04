@@ -121,14 +121,24 @@ ul#search_results {
 
 .dark, html.dark .editormd-html-preview, .dark #search_results a {
     background-color: #2e2d30;
-    color: white;
-    border-color: white;
+    color:  #aaa;
+    border-color: #bbb;
+}
+
+html.dark .editormd-html-preview a{
+    color: #84d2ff;
 }
 
 .editormd-preview-theme-dark {
-    color:white;
+    color:#bbb;
 }
 
 .navbar-admin {
     background-color: #b0232a!important;
+}
+
+.dark #tree ul li {
+    background-color: #2e2d30;
+    color: #bbb;
+    border-color: #bbb;
 }
