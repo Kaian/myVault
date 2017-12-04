@@ -209,6 +209,7 @@ function reset_timer(){
 }
 
 function reset_auto_save_timer(active_timer,action="",data="",create="",backup="",username=""){
+    reset_timer();
     window.clearInterval(timers.auto_save);
     timers.auto_save = false;
     if (active_timer){
