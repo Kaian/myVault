@@ -97,7 +97,6 @@ function login(method){
         reset_timer();
         window.clearInterval(timers.token_expiration);
         timers.token_expiration = setInterval(show_token_expiration_warning, MINUTE);
-        save_options();
         is_logged();
     }).fail(function(jqXHR, textStatus, errorThrown){
         if (jqXHR.readyState === 0){
