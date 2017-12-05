@@ -268,47 +268,57 @@ function get_tree(path) {
     var current_path = get_path();
 
     var promise = new Promise((resolve, reject) => {
-        make_action("LIST",path).done(function (response) {
-            var promises = [];
-            var items = [];
+        get_capabilities(path).then(function(capabilities_path){
+            if (capabilities_allow(capabilities_path,"list")) {
+                // be sure that we have permissions to list the path
+                make_action("LIST",path).done(function (response) {
+                    var promises = [];
+                    var items = [];
 
-            $.each(response.data.keys.sort(), (index, value) => {
-                var link_path = path + value;
+                    $.each(response.data.keys.sort(), (index, value) => {
+                        var link_path = path + value;
 
-                var item = {
-                  text: value,
-                  href: "#!" + link_path,
-                  path: "#!" + path
-                };
-
-                if (current_path.substring(0,link_path.length) == link_path){
-                    item.state = {
-                        expanded: true
-                    };
-                    if (current_path == link_path){
-                        item.state = {
-                            expanded: true,
-                            selected: true
+                        var item = {
+                          text: value,
+                          href: "#!" + link_path,
+                          path: "#!" + path
                         };
-                    }
-                }
 
-                if (value.substring(value.length - 1) == "/") {
-                   promises.push(get_tree(path + value));
-                }
+                        if (current_path.substring(0,link_path.length) == link_path){
+                            item.state = {
+                                expanded: true
+                            };
+                            if (current_path == link_path){
+                                item.state = {
+                                    expanded: true,
+                                    selected: true
+                                };
+                            }
+                        }
 
-                items.push(item);
-            });
+                        if (value.substring(value.length - 1) == "/") {
+                           promises.push(get_tree(path + value));
+                        }
 
-            Promise.all(promises).then(data => {
-                $.each(data, (index, value) => {
-                   var x = items.map(function(e){
-                       return e.href;
-                   }).indexOf(value[0].path);
-                   items[x].nodes = value;
+                        items.push(item);
+                    });
+
+                    Promise.all(promises).then(data => {
+                        $.each(data, (index, value) => {
+                            if (value != null){
+                                var x = items.map(function(e){
+                                    return e.href;
+                                }).indexOf(value[0].path);
+                                items[x].nodes = value;
+                            }
+                        });
+                        resolve(items);
+                    });
                 });
-                resolve(items);
-            });
+            } else {
+                // if we have no permissions to read, we resolve as null
+                resolve(null);
+            }
         });
     });
 
