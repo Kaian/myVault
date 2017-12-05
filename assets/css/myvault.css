@@ -112,14 +112,16 @@ a#token-renewer:hover, a#preferences-gear-icon:hover {
 }
 
 #search_results a{
-    color: #495057;
+    color: #2e2d30;
 }
 
 ul#search_results {
     list-style-type: none;
 }
 
-.dark, html.dark .editormd-html-preview, .dark #search_results a {
+.dark, html.dark .editormd-html-preview,
+.dark #search_results a,
+.dark ul#secrets_keys li a {
     background-color: #2e2d30;
     color:  #aaa;
     border-color: #bbb;
@@ -137,8 +139,17 @@ html.dark .editormd-html-preview a{
     background-color: #b0232a!important;
 }
 
-.dark #tree ul li {
+.dark #tree ul li,
+.dark ul#secrets_keys li {
     background-color: #2e2d30;
     color: #bbb;
     border-color: #bbb;
+}
+
+ul#secrets_keys li {
+    list-style-type: none;
+    border: none;
+}
+ul#secrets_keys li a {
+    color: #2e2d30;
 }

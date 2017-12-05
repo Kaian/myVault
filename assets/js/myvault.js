@@ -605,7 +605,16 @@ function get_secret(){
             }
 
             if (capabilities_allow(capabilities,"list")){
-                make_action("LIST",path).fail(function(jqXHR, textStatus, errorThrown){
+                make_action("LIST",path).done(function(response, textStatus, jqXHR){
+                    $("#secrets_keys").empty();
+                    $.each(response.data.keys.sort(), (index, value) => {
+                        $("#secrets_keys").append(
+                            $("<li>").attr("class","list-group-item float-left col-xs-6 col-md-4").append(
+                                $("<a>").attr("href","#!"+path+value).html(value)
+                            )
+                        );
+                    });
+                }).fail(function(jqXHR, textStatus, errorThrown){
                     if (jqXHR.status != 200){
                         if (jqXHR.readyState == 0){
                             $('#log_error').html("Network Error").slideDown().delay(EFFECT_TIME).slideUp();
@@ -619,6 +628,7 @@ function get_secret(){
             $("#editormd").empty().removeAttr('class').css('height', 'auto');
             $("#editormd").append('<textarea style="display:none">');
             $(".button").hide();
+            $("#secrets_keys").empty();
 
             if (capabilities_allow(capabilities,"read")) {
 
