@@ -383,11 +383,6 @@ function update_secret_tree(path="",admin=false){
             $.extend(tree_options,admin_options);
         }
         var keys_tree = $("#tree").treeview(tree_options);
-        // search tree
-        var findExpandibleNodess = function() {
-            return keys_tree.treeview("search", [ $("#input_search_tree").val(), { ignoreCase: true, exactMatch: false } ]);
-        };
-        var expandibleNodes = findExpandibleNodess();
         var search = function(e) {
             var pattern = $("#input_search_tree").val();
             var results = keys_tree.treeview("search", [ pattern, { ignoreCase: true, exactMatch: false } ]);
@@ -402,9 +397,9 @@ function update_secret_tree(path="",admin=false){
         };
         // Expand/collapse/toggle nodes
         $('#input_search_tree').on('keyup', function (e) {
-            expandibleNodes = findExpandibleNodess();
-            $('.expand-node').prop('disabled', !(expandibleNodes.length >= 1));
-            search();
+            if ($("#input_search_tree").val().length >= 3){
+                search();
+            }
         });
     });
 }
