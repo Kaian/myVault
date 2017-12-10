@@ -74,10 +74,14 @@
       <div class="row">
         <div id="secrets" class="col-md-2">
             <div id="tree_search" class="input-group">
-                <span class="input-group-addon">
-                    <i class="fa fa-search" aria-hidden="true"></i>
-                </span>
-                <input id="input_search_tree" type="text" class="form-control" placeholder="Search...">
+                <form id="search_tree_form" action='javascript:search_tree();' autocomplete="off">
+                    <div class="form-row">
+                        <span class="input-group-addon">
+                            <i class="fa fa-search" aria-hidden="true"></i>
+                        </span>
+                        <input id="input_search_tree" type="text" class="form-control" placeholder="Search...">
+                    </div>
+                </form>
             </div>
             <div id="tree"></div>
         </div>

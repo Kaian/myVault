@@ -382,26 +382,21 @@ function update_secret_tree(path="",admin=false){
             };
             $.extend(tree_options,admin_options);
         }
-        var keys_tree = $("#tree").treeview(tree_options);
-        var search = function(e) {
-            var pattern = $("#input_search_tree").val();
-            var results = keys_tree.treeview("search", [ pattern, { ignoreCase: true, exactMatch: false } ]);
-            var output = '<p>' + results.length + ' matches found</p><ul id="search_results">';
-            $.each(results, function (index, result) {
-                var href = result.href.replace("#!","");
-                output += '<li class="search_result"><a href="'+result.href+'">'+href+"</a></li>";
-            });
-            output += "</li>";
-            $("#search_results").html(output);
-            $("#search_results").show();
-        };
-        // Expand/collapse/toggle nodes
-        $('#input_search_tree').on('keyup', function (e) {
-            if ($("#input_search_tree").val().length >= 3){
-                search();
-            }
-        });
+        $("#tree").treeview(tree_options);
     });
+}
+
+function search_tree(){
+    var pattern = $("#input_search_tree").val();
+    var results = $('#tree').treeview("search", [ pattern, { ignoreCase: true, exactMatch: false } ]);
+    var output = '<p>' + results.length + ' matches found</p><ul id="search_results">';
+    $.each(results, function (index, result) {
+        var href = result.href.replace("#!","");
+        output += '<li class="search_result"><a href="'+result.href+'">'+href+"</a></li>";
+    });
+    output += "</li>";
+    $("#search_results").html(output);
+    $("#search_results").show();
 }
 
 function update_breadcrumb() {
