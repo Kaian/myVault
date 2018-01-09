@@ -716,7 +716,7 @@ function get_secret(){
                                 };
                                 this.addKeyMap(keyMap);
 
-                                set_secret("locked",editormarkdown.getMarkdown(),false,true,preferences.username);
+                                set_secret("locked",response.data.data,false,true,preferences.username);
                                 reset_auto_save_timer(true,"auto-saved",editormarkdown.getMarkdown(),false,true,preferences.username);
                                 // Awesome hack to add "save" and close buttons :D
                                 $("ul.editormd-menu")
