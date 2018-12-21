@@ -120,6 +120,11 @@
                   <button id="unlock_secret_btn"  type="button" class="btn btn-outline-secondary fa fa-unlock-alt button" data-toggle="tooltip" title="unlock" style="display:none;"></button>
                   <button id="delete_secret_btn"  type="button" class="btn btn-outline-danger fa fa-remove button" data-toggle="modal" title="delete" data-target="#delete_modal"></button>
               </div>
+              <div id="last_update" class="">
+                  <p id="last_update">Last Update: 
+                      <span id="last_update_time">holl</span>
+                  </p>
+              </div>
 
               <div id="editormd">
                   <textarea  style="display:none;"></textarea>
@@ -244,7 +249,6 @@
             $("#edit_secret_btn").click(function(){
                 var path = get_path();
                 window.location.href = "#!"+path+"&edit=1";
-                update_secret_tree();
             });
 
             $("#backups_secret_btn").click(function(){

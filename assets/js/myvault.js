@@ -93,6 +93,7 @@ function login(method){
                 preferences.backup_path = "/backup"+preferences.secret_path;
             }
         });
+        localStorage.setItem("myvault_preferences", JSON.stringify(preferences));
         $("#login_modal").modal("hide");
         reset_timer();
         window.clearInterval(timers.token_expiration);
@@ -544,8 +545,7 @@ function set_secret(action,data,create,backup,locked_by){
     set_vault_secret(path,data,backup,locked_by,action).done(function(response, textStatus, jqXHR){
         $("#log_success").html("Secret has been "+action).slideDown().delay(EFFECT_TIME).slideUp();
         if (create){
-            window.location.href = "#!"+path+"&edit=1";
-            update_secret_tree();
+            window.location.href = "#!"+path+"&edit=1&created=1";
         }
         if (action == "unlocked" || action == "closed"){
             get_secret();
@@ -584,6 +584,7 @@ function get_secret(){
     get_capabilities(path).then(function(capabilities){
 
         if (path.substring(path.length-1) == "/"){
+            $("#last_update").hide();
             $("#editormd").empty();
             //directory
             $("#editors").slideUp(EFFECT_TIME_EDITORS);
@@ -625,6 +626,8 @@ function get_secret(){
                 make_action("GET",path).done(function(response, textStatus, jqXHR){
                     $("#editors").slideDown(EFFECT_TIME_EDITORS);
                     $("#editormd textarea").text(response.data.data);
+                    $("#last_update").show();
+                    $("#last_update_time").text((new Date(response.data.date)).toString() + " by " + response.data.by);
                     $("#search_results").hide();
 
                     if (response.data.locked_by){
@@ -708,10 +711,16 @@ function get_secret(){
                                     },
                                     "Ctrl-Q": function(cm) {
                                         var path = get_path();
-                                        path = path.replace('&edit=1', '');
+                                        if (path.search("created=1") > 0){
+                                            update_secret_tree();
+                                        }
+                                        if (path.search("created=1") > 0){
+                                            path = path.replace('&edit=1&created=1', '');
+                                        } else {
+                                            path = path.replace('&edit=1', '');
+                                        }
                                         set_secret("closed",editormarkdown.getMarkdown(),false,true,"");
                                         window.location.href = "#!"+path;
-                                        update_secret_tree();
                                     }
                                 };
                                 this.addKeyMap(keyMap);
@@ -727,9 +736,15 @@ function get_secret(){
                                         <i class="fa fa-floppy-o" unselectable="on"></i></a></li>');
                                 $("#close_secret_btn").click(function(){
                                     var path = get_path();
-                                    path = path.replace('&edit=1', '');
+                                    if (path.search("created=1") > 0){
+                                        update_secret_tree();
+                                    }
+                                    if (path.search("created=1") > 0){
+                                        path = path.replace('&edit=1&created=1', '');
+                                    } else {
+                                        path = path.replace('&edit=1', '');
+                                    }
                                     set_secret("closed",editormarkdown.getMarkdown(),false,true,"");
-                                    update_secret_tree();
                                     window.location.href = "#!"+path;
                                 });
                                 $("#editor_update_secret_btn").click(function(){
@@ -816,7 +831,7 @@ function hash_changed(event){
         expand_tree();
     } else {
         if (event.oldURL.indexOf("&")>0){
-            if (event.oldURL == (event.newURL+"&edit=1")){
+            if (event.oldURL == (event.newURL+"&edit=1") || event.oldURL == (event.newURL+"&edit=1&created=1")){
                 window.location = event.newURL;
                 reset_auto_save_timer(false);
                 reset_timer();

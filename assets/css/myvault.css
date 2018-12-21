@@ -153,3 +153,10 @@ ul#secrets_keys li {
 ul#secrets_keys li a {
     color: #2e2d30;
 }
+
+p#last_update {
+    padding-left: 20px;
+}
+p#last_update span {
+    font-weight: bold;
+}
