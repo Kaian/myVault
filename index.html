@@ -49,7 +49,13 @@
         <ul class="navbar-nav mr-auto">
         </ul>
 
+
         <ul class="navbar-nav  my-2 my-lg-0">
+          <li class="nav-item">
+            <a id="hide-menu-icon" class="navbar-brand">
+              <i id="eye-icon" class="fa fa-eye fa-inverse" aria-hidden="true" title="Hide menu"></i>
+            </a>
+          </li>
           <li class="nav-item">
             <a id="token-timer" class="navbar-brand navbar-dark" data-toggle="tooltip" title="Token expiration time"></a>
           </li>
@@ -72,24 +78,28 @@
 
     <div id="principal" class="container-fluid">
       <div class="row">
+        <div id="tree_search" class="col-md-2 input-group">
+            <form id="search_tree_form" action='javascript:search_tree();' autocomplete="off">
+                <div class="form-row">
+                    <span class="input-group-addon">
+                        <i class="fa fa-search" aria-hidden="true"></i>
+                    </span>
+                    <input id="input_search_tree" type="text" class="form-control" placeholder="Search...">
+                </div>
+            </form>
+        </div>
+        <ol id="secret_path" class="col-md-9 breadcrumb">
+            <li class="breadcrumb-item"><a href="index.html">secret</a></li>
+        </ol>
+
+
+      </div>
+      <div class="row" id="row-main">
         <div id="secrets" class="col-md-2">
-            <div id="tree_search" class="input-group">
-                <form id="search_tree_form" action='javascript:search_tree();' autocomplete="off">
-                    <div class="form-row">
-                        <span class="input-group-addon">
-                            <i class="fa fa-search" aria-hidden="true"></i>
-                        </span>
-                        <input id="input_search_tree" type="text" class="form-control" placeholder="Search...">
-                    </div>
-                </form>
-            </div>
             <div id="tree"></div>
         </div>
 
-        <main class="col-md-10 col-md-auto" role="main">
-          <ol id="secret_path" class="breadcrumb">
-              <li class="breadcrumb-item"><a href="index.html">secret</a></li>
-          </ol>
+        <main id="main" class="col-md-10 col-md-auto" role="main">
 
           <div id="log_error" class="alert alert-danger" role="alert" style="display:none"></div>
           <div id="log_success" class="alert alert-success" role="alert" style="display:none"></div>
@@ -235,6 +245,10 @@
         });
         $("#save_preferences").click(function(){
             save_options();
+        });
+        $("#hide-menu-icon").click(function(){
+           $("#secrets").toggle();
+           $("#main").toggleClass("col-md-10 col-md-12");
         });
 
         $(document).ready(function(){
