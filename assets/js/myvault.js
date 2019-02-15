@@ -581,6 +581,8 @@ function get_secret(){
     }
     update_breadcrumb();
 
+    document.title = "My Vault - " + path;
+
     get_capabilities(path).then(function(capabilities){
 
         if (path.substring(path.length-1) == "/"){
